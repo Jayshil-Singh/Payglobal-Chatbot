@@ -15,15 +15,17 @@ st.set_page_config(
 )
 
 # ── Imports ────────────────────────────────────────────────────────────────
-from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR
+from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR, RATE_LIMIT_PER_HOUR
 from auth import bootstrap_admin, login, register
 from db import (
     create_conversation, get_user_conversations, get_messages,
     save_message, delete_conversation, update_conversation_title,
-    save_feedback,
+    save_feedback, get_all_conversations_admin, get_analytics_data,
+    get_all_users, get_request_count_last_hour,
 )
 from ingest import ingest_file, index_exists
 from rag_chain import get_rag_chain, ask
+from utils.exporter import export_to_pdf, export_to_docx, export_answer_pdf
 
 # Bootstrap DB + admin account on every cold start
 bootstrap_admin()
@@ -235,14 +237,16 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 # ══════════════════════════════════════════════════════════════════════════
 def init_state():
     defaults = {
-        "authenticated": False,
-        "user":          None,
-        "conv_id":       None,
-        "messages":      [],   # [{role, content, sources}]
-        "rag_chain":     None,
-        "module":        "All Modules",
-        "show_login":    True,  # False = show register
-        "api_key":       GROK_API_KEY,
+        "authenticated":  False,
+        "user":           None,
+        "conv_id":        None,
+        "messages":       [],   # [{role, content, sources}]
+        "rag_chain":      None,
+        "module":         "All Modules",
+        "show_login":     True,  # False = show register
+        "api_key":        GROK_API_KEY,
+        "page":           "chat",   # "chat" | "analytics"
+        "admin_view_all": False,    # admin: toggle to see all users' convs
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -391,14 +395,34 @@ def show_sidebar():
         """, unsafe_allow_html=True)
 
         user = st.session_state.user
+        is_admin = user["role"] == "admin"
+
         st.markdown(f"""
         <div style='text-align:center; margin-bottom:0.8rem;'>
             <span style='font-size:0.8rem; color:#8b949e;'>
                 👤 {user['username']}
-                <span class='badge badge-{"blue" if user["role"]=="admin" else "green"}'>{user['role']}</span>
+                <span class='badge badge-{"blue" if is_admin else "green"}'>{user['role']}</span>
             </span>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── Admin nav buttons ──────────────────────────────────────────────────────
+        if is_admin:
+            acol1, acol2 = st.columns(2)
+            with acol1:
+                if st.session_state.page != "analytics":
+                    if st.button("📊 Analytics", use_container_width=True, key="nav_analytics"):
+                        st.session_state.page = "analytics"
+                        st.rerun()
+                else:
+                    if st.button("💬 Chat", use_container_width=True, key="nav_chat"):
+                        st.session_state.page = "chat"
+                        st.rerun()
+            with acol2:
+                label = "👥 All Users" if not st.session_state.admin_view_all else "👤 My Chats"
+                if st.button(label, use_container_width=True, key="admin_toggle"):
+                    st.session_state.admin_view_all = not st.session_state.admin_view_all
+                    st.rerun()
 
         # New Chat
         if st.button("➕  New Chat", use_container_width=True):
@@ -699,4 +723,7 @@ if not st.session_state.authenticated:
     show_login_page()
 else:
     show_sidebar()
-    show_chat()
+    if st.session_state.page == "analytics":
+        show_analytics()
+    else:
+        show_chat()

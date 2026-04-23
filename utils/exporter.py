@@ -1,5 +1,6 @@
 """
 utils/exporter.py — Export conversations to PDF (#10) and Word (#14).
+Also exports individual AI answers as standalone PDFs.
 """
 import io
 from datetime import datetime
@@ -195,5 +196,73 @@ def export_to_docx(messages: List[Dict], username: str, module: str) -> bytes:
 
     buffer = io.BytesIO()
     doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def export_answer_pdf(answer: str, sources: list, username: str) -> bytes:
+    """
+    Generate a standalone PDF of a single AI answer (#10).
+    Returns raw bytes suitable for st.download_button.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib.colors import HexColor
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
+    )
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        leftMargin=2.5 * cm, rightMargin=2.5 * cm,
+    )
+    styles = getSampleStyleSheet()
+
+    title_s = ParagraphStyle(
+        "AnswerTitle", parent=styles["Title"],
+        fontSize=18, textColor=HexColor("#0d1117"), spaceAfter=4,
+    )
+    meta_s = ParagraphStyle(
+        "AnswerMeta", parent=styles["Normal"],
+        fontSize=9, textColor=HexColor("#6e7681"), spaceAfter=10,
+    )
+    body_s = ParagraphStyle(
+        "AnswerBody", parent=styles["Normal"],
+        fontSize=10, textColor=HexColor("#24292f"), leading=15, spaceAfter=6,
+    )
+    src_s = ParagraphStyle(
+        "AnswerSrc", parent=styles["Normal"],
+        fontSize=8, textColor=HexColor("#8b949e"), leftIndent=12,
+    )
+
+    story = []
+    story.append(Paragraph("PayGlobal AI — Answer", title_s))
+    story.append(Paragraph(
+        f"User: <b>{username}</b> &nbsp;|&nbsp; "
+        f"Generated: {datetime.now().strftime('%d %B %Y, %H:%M')}",
+        meta_s,
+    ))
+    story.append(HRFlowable(width="100%", thickness=1.5,
+                            color=HexColor("#4f6ef7"), spaceAfter=10))
+
+    cleaned = _clean_for_pdf(answer).replace("\n", "<br/>")
+    story.append(Paragraph(cleaned, body_s))
+
+    if sources:
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(Paragraph("<b>Sources:</b>", src_s))
+        for s in sources[:8]:
+            if isinstance(s, dict):
+                f = s.get("file", "")
+                p = s.get("page", "")
+                label = f"{f}{(' — ' + p) if p else ''}"
+            else:
+                label = str(s)
+            story.append(Paragraph(f"&bull; {label}", src_s))
+
+    doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()

@@ -12,13 +12,13 @@ log = get_logger(__name__)
 
 def load_pdfs(folder: Path) -> List[Document]:
     """Load all PDFs from a directory using pypdf."""
-    from langchain_community.document_loaders import PyPDFLoader
+    from langchain_community.document_loaders import PyMuPDFLoader
     docs = []
     pdf_files = list(folder.glob("**/*.pdf"))
     log.info(f"Found {len(pdf_files)} PDF(s) in {folder}")
     for pdf in pdf_files:
         try:
-            loader = PyPDFLoader(str(pdf))
+            loader = PyMuPDFLoader(str(pdf))
             pages = loader.load()
             # Tag metadata
             for page in pages:

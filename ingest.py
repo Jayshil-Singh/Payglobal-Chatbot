@@ -198,8 +198,8 @@ def ingest_folder(
             # Load just this specific file directly
             ext = file_path.suffix.lower()
             if ext == ".pdf":
-                from langchain_community.document_loaders import PyPDFLoader
-                loader = PyPDFLoader(str(file_path))
+                from langchain_community.document_loaders import PyMuPDFLoader
+                loader = PyMuPDFLoader(str(file_path))
                 docs = loader.load()
                 for d in docs:
                     d.metadata["source_file"] = file_path.name

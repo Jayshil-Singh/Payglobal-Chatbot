@@ -5,7 +5,7 @@ Tables: users, conversations, messages, feedback
 import sqlite3
 import json
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from config import DB_PATH
 from utils.logger import get_logger
@@ -124,6 +124,20 @@ def get_user_conversations(user_id: int) -> List[Dict]:
         return [dict(r) for r in rows]
 
 
+def get_all_conversations_admin() -> List[Dict]:
+    """Admin-only: all conversations across all users, with username attached."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT c.*, u.username
+            FROM conversations c
+            JOIN users u ON c.user_id = u.id
+            ORDER BY c.updated_at DESC
+            """
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def update_conversation_title(conv_id: int, title: str):
     with get_conn() as conn:
         conn.execute(
@@ -199,3 +213,90 @@ def get_feedback_stats() -> Dict:
             """
         ).fetchone()
         return dict(row) if row else {"total": 0, "thumbs_up": 0, "thumbs_down": 0}
+
+
+# ── Rate Limiting ──────────────────────────────────────────────────────────
+
+def get_request_count_last_hour(user_id: int) -> int:
+    """Count how many user messages this user sent in the last 60 minutes."""
+    since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            WHERE c.user_id = ? AND m.role = 'user' AND m.timestamp >= ?
+            """,
+            (user_id, since),
+        ).fetchone()
+        return row["cnt"] if row else 0
+
+
+# ── Admin / Analytics ──────────────────────────────────────────────────────
+
+def get_all_users() -> List[Dict]:
+    """Admin-only: return all registered users."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, username, email, role, created_at, last_login FROM users ORDER BY created_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_analytics_data() -> Dict:
+    """Comprehensive analytics for the admin dashboard."""
+    with get_conn() as conn:
+        # Totals
+        totals = dict(conn.execute("""
+            SELECT
+                (SELECT COUNT(*) FROM users)         AS total_users,
+                (SELECT COUNT(*) FROM conversations) AS total_conversations,
+                (SELECT COUNT(*) FROM messages)      AS total_messages,
+                (SELECT COUNT(*) FROM messages WHERE role='user') AS total_questions
+        """).fetchone())
+
+        # Messages per day (last 14 days)
+        daily_rows = conn.execute("""
+            SELECT DATE(timestamp) AS day, COUNT(*) AS cnt
+            FROM messages
+            WHERE role = 'user'
+              AND timestamp >= DATE('now', '-14 days')
+            GROUP BY day
+            ORDER BY day ASC
+        """).fetchall()
+        totals["daily_messages"] = [dict(r) for r in daily_rows]
+
+        # Module usage distribution
+        module_rows = conn.execute("""
+            SELECT module, COUNT(*) AS cnt
+            FROM conversations
+            GROUP BY module
+            ORDER BY cnt DESC
+        """).fetchall()
+        totals["module_usage"] = [dict(r) for r in module_rows]
+
+        # Top 10 most active users
+        top_users = conn.execute("""
+            SELECT u.username, COUNT(m.id) AS msg_count
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            JOIN users u ON c.user_id = u.id
+            WHERE m.role = 'user'
+            GROUP BY u.id
+            ORDER BY msg_count DESC
+            LIMIT 10
+        """).fetchall()
+        totals["top_users"] = [dict(r) for r in top_users]
+
+        # Feedback stats
+        fb = conn.execute("""
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN rating =  1 THEN 1 ELSE 0 END) AS thumbs_up,
+                SUM(CASE WHEN rating = -1 THEN 1 ELSE 0 END) AS thumbs_down
+            FROM feedback
+        """).fetchone()
+        totals["feedback"] = dict(fb) if fb else {"total": 0, "thumbs_up": 0, "thumbs_down": 0}
+
+        return totals

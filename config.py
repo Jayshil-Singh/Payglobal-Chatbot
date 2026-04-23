@@ -51,3 +51,7 @@ PAYGLOBAL_MODULES = [
 # ── Default Admin Credentials (change after first login) ──────────────────
 DEFAULT_ADMIN_USER = "admin"
 DEFAULT_ADMIN_PASS = "PayGlobal@2024"
+
+# ── Rate Limiting ──────────────────────────────────────────────────────────
+RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "50"))
+
