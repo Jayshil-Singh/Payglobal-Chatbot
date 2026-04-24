@@ -90,7 +90,7 @@ def render_admin_panel(
 
                 with c3:
                     if not is_me:
-                        sel = st.selectbox("", ["user", "admin"], index=0 if item["role"] == "user" else 1, key=f"rsel_{item['id']}", label_visibility="collapsed")
+                        sel = st.selectbox("Role", ["user", "admin"], index=0 if item["role"] == "user" else 1, key=f"rsel_{item['id']}", label_visibility="collapsed")
                         if sel != item["role"]:
                             update_user_role_fn(item["id"], sel)
                             st.toast(f"✅ {item['username']} → {sel}")
@@ -100,8 +100,8 @@ def render_admin_panel(
 
                 with c4:
                     if not is_me:
-                        new_pw = st.text_input("", key=f"npw_{item['id']}", placeholder="New password…", type="password", label_visibility="collapsed")
-                        if st.button("🔑 Reset", key=f"rpw_{item['id']}", use_container_width=True):
+                        new_pw = st.text_input("New password", key=f"npw_{item['id']}", placeholder="New password…", type="password", label_visibility="collapsed")
+                        if st.button("🔑 Reset", key=f"rpw_{item['id']}", width="stretch"):
                             if new_pw and len(new_pw) >= 6:
                                 reset_user_password_fn(item["id"], hash_password(new_pw))
                                 st.toast(f"🔑 Password reset for {item['username']}")
@@ -157,7 +157,7 @@ def render_admin_panel(
 
         st.markdown("#### ♻️ Re-index All Documents")
         st.caption("Wipes and rebuilds the entire FAISS vector store from all uploaded files.")
-        if st.button("⚡ Re-ingest Everything", type="primary", use_container_width=True):
+        if st.button("⚡ Re-ingest Everything", type="primary", width="stretch"):
             if files:
                 total_chunks, prog = 0, st.progress(0)
                 for i, file in enumerate(files):
@@ -194,7 +194,7 @@ def render_admin_panel(
                 active = "✅ " if model == GROK_MODEL else "· "
                 st.markdown(f"{active}`{model}`")
 
-        if st.button("💾 Apply Config", type="primary", use_container_width=True):
+        if st.button("💾 Apply Config", type="primary", width="stretch"):
             env_path = Path(__file__).resolve().parents[1] / ".env"
             lines = env_path.read_text(encoding="utf-8").splitlines() if env_path.exists() else []
             env_dict = {}
@@ -213,16 +213,16 @@ def render_admin_panel(
         st.markdown("#### ✏️ System Prompt Editor")
         st.caption("Defines the AI's scope, tone, and response style. Saved changes take effect on next question.")
         current_prompt = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8") if SYSTEM_PROMPT_PATH.exists() else ""
-        new_prompt = st.text_area("", value=current_prompt, height=380, label_visibility="collapsed", placeholder="You are a helpful PayGlobal AI assistant…")
+        new_prompt = st.text_area("System prompt", value=current_prompt, height=380, label_visibility="collapsed", placeholder="You are a helpful PayGlobal AI assistant…")
         pe1, pe2 = st.columns(2)
         with pe1:
-            if st.button("💾 Save Prompt", type="primary", use_container_width=True):
+            if st.button("💾 Save Prompt", type="primary", width="stretch"):
                 SYSTEM_PROMPT_PATH.parent.mkdir(parents=True, exist_ok=True)
                 SYSTEM_PROMPT_PATH.write_text(new_prompt, encoding="utf-8")
                 st.session_state.rag_chain = None
                 st.success("✅ Prompt saved. AI will use it on the next question.")
         with pe2:
-            if st.button("↩️ Reset to Default", use_container_width=True):
+            if st.button("↩️ Reset to Default", width="stretch"):
                 default = (
                     "You are PayGlobal Expert, an AI consultant specialising exclusively in the PayGlobal ERP system.\n\n"
                     "Use the provided context to answer questions about PayGlobal installation, "
@@ -253,4 +253,4 @@ def render_admin_panel(
             df["Timestamp"] = df["Timestamp"].str[:16]
             df["Question"] = df["Question"].str[:120] + "…"
             df.index = df.index + 1
-            st.dataframe(df[["Timestamp", "User", "Module", "Question"]], use_container_width=True, height=460)
+            st.dataframe(df[["Timestamp", "User", "Module", "Question"]], width="stretch", height=460)
