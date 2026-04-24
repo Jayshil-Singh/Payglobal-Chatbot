@@ -300,3 +300,60 @@ def get_analytics_data() -> Dict:
         totals["feedback"] = dict(fb) if fb else {"total": 0, "thumbs_up": 0, "thumbs_down": 0}
 
         return totals
+
+
+# ── Admin User Management ──────────────────────────────────────────────────
+
+def delete_user(user_id: int) -> None:
+    """Delete a user and all associated conversations/messages/feedback."""
+    with get_conn() as conn:
+        # Cascade: feedback → messages → conversations → user
+        conn.execute("DELETE FROM feedback WHERE user_id = ?", (user_id,))
+        conv_ids = [
+            r[0] for r in conn.execute(
+                "SELECT id FROM conversations WHERE user_id = ?", (user_id,)
+            ).fetchall()
+        ]
+        for cid in conv_ids:
+            conn.execute("DELETE FROM messages WHERE conversation_id = ?", (cid,))
+        conn.execute("DELETE FROM conversations WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+
+def update_user_role(user_id: int, new_role: str) -> None:
+    """Promote or demote a user's role ('user' | 'admin')."""
+    with get_conn() as conn:
+        conn.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+
+
+def reset_user_password(user_id: int, new_password_hash: str) -> None:
+    """Overwrite a user's password hash (pre-hashed with bcrypt)."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_password_hash, user_id),
+        )
+
+
+def get_recent_audit_log(limit: int = 100) -> List[Dict]:
+    """Return the most recent user messages across all conversations for audit."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                u.username,
+                c.title      AS conversation,
+                c.module,
+                m.role,
+                m.content,
+                m.timestamp
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            JOIN users u ON c.user_id = u.id
+            WHERE m.role = 'user'
+            ORDER BY m.timestamp DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
