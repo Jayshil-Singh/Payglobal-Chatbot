@@ -29,6 +29,14 @@ MIN_CONTEXT_CHARS = 100
 MAX_RETRIES   = 3
 RETRY_BACKOFF = 2   # seconds (doubles each attempt)
 
+# Error strings that signal a non-retryable failure (billing / auth)
+_NO_RETRY_PHRASES = [
+    "credits or licenses",   # 403 — no billing credits
+    "Incorrect API key",     # 400 — wrong key format
+    "invalid_api_key",       # OpenAI-style error code
+    "No API key",
+]
+
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
 
@@ -280,7 +288,9 @@ def ask(chain, question: str) -> Dict[str, Any]:
         }
 
     # ── #1 Retry with exponential backoff ─────────────────────────────────
-    last_error = None
+    last_error  = None
+    error_type  = "api_error"   # default; may be overridden below
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             result   = chain({"question": question})
@@ -291,14 +301,29 @@ def ask(chain, question: str) -> Dict[str, Any]:
             sources = _extract_sources(raw_docs)
 
             return {
-                "answer":  answer,
-                "sources": sources,
-                "retries": attempt - 1,
-                "idk":     False,
+                "answer":     answer,
+                "sources":    sources,
+                "retries":    attempt - 1,
+                "idk":        False,
+                "error_type": None,
             }
 
         except Exception as e:
-            last_error = e
+            last_error  = e
+            err_str     = str(e)
+
+            # ── Detect non-retryable errors ───────────────────────────────
+            if "credits or licenses" in err_str:
+                error_type = "no_credits"
+                log.error(f"Billing error — no xAI credits: {e}")
+                break   # no point retrying
+
+            if any(p in err_str for p in ["Incorrect API key", "invalid_api_key", "No API key"]):
+                error_type = "invalid_key"
+                log.error(f"Invalid Grok API key: {e}")
+                break   # no point retrying
+
+            # ── Transient errors → retry with backoff ─────────────────────
             if attempt < MAX_RETRIES:
                 wait = RETRY_BACKOFF ** attempt
                 log.warning(f"Grok API error (attempt {attempt}/{MAX_RETRIES}), retrying in {wait}s: {e}")
@@ -306,13 +331,30 @@ def ask(chain, question: str) -> Dict[str, Any]:
             else:
                 log.error(f"All {MAX_RETRIES} attempts failed: {e}")
 
-    return {
-        "answer": (
+    # ── Build user-visible error answer ───────────────────────────────────
+    if error_type == "no_credits":
+        answer_msg = (
+            "⚠️ **No API Credits / Quota Exceeded**\n\n"
+            "Your API quota has been exhausted. If you're using the **free Groq tier**, "
+            "get a fresh key at [console.groq.com](https://console.groq.com) "
+            "and paste it in the sidebar under **🔑 API Key**."
+        )
+    elif error_type == "invalid_key":
+        answer_msg = (
+            "🔑 **Invalid API Key**\n\n"
+            "The Grok API key provided doesn't appear to be valid. "
+            "Please update it in the sidebar under **🔑 Grok API Key**."
+        )
+    else:
+        answer_msg = (
             f"The AI service is temporarily unavailable after {MAX_RETRIES} attempts.\n\n"
-            f"**Error:** {last_error}\n\n"
             "Please try again in a moment."
-        ),
-        "sources": [],
-        "retries": MAX_RETRIES,
-        "idk":     False,
+        )
+
+    return {
+        "answer":     answer_msg,
+        "sources":    [],
+        "retries":    MAX_RETRIES,
+        "idk":        False,
+        "error_type": error_type,
     }

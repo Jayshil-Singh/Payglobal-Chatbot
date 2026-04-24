@@ -17,10 +17,13 @@ SYSTEM_PROMPT_PATH = BASE_DIR / "prompts" / "system_prompt.txt"
 for d in [RAW_DOCS_DIR, UPLOADS_DIR, FAISS_INDEX_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
-# ── Grok (xAI) LLM ────────────────────────────────────────────────────────
+# ── LLM — Groq (free tier) ───────────────────────────────────────────────────
+# Get a free API key at: https://console.groq.com  (no credit card needed)
+# Compatible models (all free): llama-3.3-70b-versatile, llama3-8b-8192,
+#                                mixtral-8x7b-32768, gemma2-9b-it
 GROK_API_KEY  = os.getenv("GROK_API_KEY", "")
-GROK_BASE_URL = "https://api.x.ai/v1"
-GROK_MODEL    = os.getenv("GROK_MODEL", "grok-3")
+GROK_BASE_URL = os.getenv("GROK_BASE_URL", "https://api.groq.com/openai/v1")
+GROK_MODEL    = os.getenv("GROK_MODEL",    "llama-3.3-70b-versatile")
 
 # ── Embeddings (local HuggingFace — no API key required) ──────────────────
 # Model is downloaded once (~90 MB) and cached in ~/.cache/huggingface/
