@@ -40,8 +40,31 @@ st.markdown("""
 
 html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
 .stApp{background:#070b14!important;color:#e6edf3}
-#MainMenu,footer,header{visibility:hidden}
+#MainMenu,footer{visibility:hidden}
+header[data-testid="stHeader"]{background:rgba(7,11,20,0.0)!important}
+[data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stStatusWidget"]{visibility:hidden!important}
 .block-container{padding:0.8rem 1.5rem 0 1.5rem!important;max-width:100%!important}
+
+/* ── Sidebar toggle — pulsing blue pill so it's impossible to miss ── */
+[data-testid="collapsedControl"]{
+    display:flex!important;visibility:visible!important;opacity:1!important;
+    background:linear-gradient(135deg,rgba(79,110,247,0.22),rgba(124,58,237,0.15))!important;
+    border:2px solid rgba(79,110,247,0.65)!important;
+    border-left:none!important;border-radius:0 12px 12px 0!important;
+    padding:14px 10px!important;
+    box-shadow:4px 0 24px rgba(79,110,247,0.4)!important;
+    z-index:999999!important;
+    animation:sb-pulse 2.5s ease-in-out infinite!important
+}
+@keyframes sb-pulse{
+    0%,100%{box-shadow:4px 0 20px rgba(79,110,247,0.3)}
+    50%  {box-shadow:4px 0 30px rgba(79,110,247,0.6),0 0 0 4px rgba(79,110,247,0.1)}
+}
+[data-testid="collapsedControl"] svg{fill:#7b9cff!important;width:20px!important;height:20px!important}
+[data-testid="collapsedControl"]:hover{
+    background:rgba(79,110,247,0.35)!important;
+    box-shadow:4px 0 32px rgba(79,110,247,0.6)!important
+}
 
 /* ── FIX THE WHITE BOTTOM INPUT BAR ── */
 [data-testid="stBottom"],[data-testid="stChatInputContainer"],
