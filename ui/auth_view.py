@@ -23,7 +23,7 @@ def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
         with st.form("login_form"):
             username = st.text_input("Username", placeholder="Enter your username")
             password = st.text_input("Password", type="password", placeholder="Enter your password")
-            submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+            submitted = st.form_submit_button("Sign In", width="stretch", type="primary")
 
         if submitted:
             if not username or not password:

@@ -126,15 +126,15 @@ def show_admin_quick_nav() -> None:
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("Chat", key="top_nav_chat", use_container_width=True, type="primary" if st.session_state.page == "chat" else "secondary"):
+        if st.button("Chat", key="top_nav_chat", width="stretch", type="primary" if st.session_state.page == "chat" else "secondary"):
             st.session_state.page = "chat"
             st.rerun()
     with c2:
-        if st.button("Stats", key="top_nav_stats", use_container_width=True, type="primary" if st.session_state.page == "analytics" else "secondary"):
+        if st.button("Stats", key="top_nav_stats", width="stretch", type="primary" if st.session_state.page == "analytics" else "secondary"):
             st.session_state.page = "analytics"
             st.rerun()
     with c3:
-        if st.button("Admin", key="top_nav_admin", use_container_width=True, type="primary" if st.session_state.page == "admin" else "secondary"):
+        if st.button("Admin", key="top_nav_admin", width="stretch", type="primary" if st.session_state.page == "admin" else "secondary"):
             st.session_state.page = "admin"
             st.rerun()
 

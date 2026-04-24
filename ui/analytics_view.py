@@ -64,7 +64,7 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
                 margin=dict(l=0, r=0, t=10, b=0),
                 height=280,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("No activity data yet.")
 
@@ -83,7 +83,7 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
                 showlegend=True,
                 legend=dict(bgcolor="#0d1117", font=dict(size=10)),
             )
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, width="stretch")
         else:
             st.info("No module data yet.")
 
@@ -114,7 +114,7 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
                 )
             )
             fig3.update_layout(paper_bgcolor="#0d1117", font=dict(color="#e6edf3"), margin=dict(l=10, r=10, t=20, b=10), height=220)
-            st.plotly_chart(fig3, use_container_width=True)
+            st.plotly_chart(fig3, width="stretch")
             st.markdown(
                 f"<div style='text-align:center; font-size:0.8rem; color:#8b949e;'>👍 {up} &nbsp;|&nbsp; 👎 {dn} &nbsp;|&nbsp; Total {total_fb}</div>",
                 unsafe_allow_html=True,
@@ -129,7 +129,7 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
             df = pd.DataFrame(top_users)
             df.columns = ["Username", "Questions Asked"]
             df.index = df.index + 1
-            st.dataframe(df, use_container_width=True, height=230)
+            st.dataframe(df, width="stretch", height=230)
         else:
             st.info("No user activity yet.")
 
@@ -140,6 +140,6 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
         udf = pd.DataFrame(all_users)[["username", "email", "role", "created_at", "last_login"]]
         udf.columns = ["Username", "Email", "Role", "Registered", "Last Login"]
         udf.index = udf.index + 1
-        st.dataframe(udf, use_container_width=True)
+        st.dataframe(udf, width="stretch")
     else:
         st.info("No users found.")

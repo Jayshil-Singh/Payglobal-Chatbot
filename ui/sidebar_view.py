@@ -56,25 +56,25 @@ def render_sidebar(
             page = st.session_state.page
             n1, n2, n3 = st.columns(3)
             with n1:
-                if st.button("💬 Chat", key="nav_chat", use_container_width=True, type="primary" if page == "chat" else "secondary"):
+                if st.button("💬 Chat", key="nav_chat", width="stretch", type="primary" if page == "chat" else "secondary"):
                     st.session_state.page = "chat"
                     st.rerun()
             with n2:
                 if st.button(
                     "📊 Stats",
                     key="nav_analytics",
-                    use_container_width=True,
+                    width="stretch",
                     type="primary" if page == "analytics" else "secondary",
                 ):
                     st.session_state.page = "analytics"
                     st.rerun()
             with n3:
-                if st.button("⚙️ Admin", key="nav_admin", use_container_width=True, type="primary" if page == "admin" else "secondary"):
+                if st.button("⚙️ Admin", key="nav_admin", width="stretch", type="primary" if page == "admin" else "secondary"):
                     st.session_state.page = "admin"
                     st.rerun()
             st.markdown("<div style='height:.15rem'></div>", unsafe_allow_html=True)
 
-        if st.button("＋  New Chat", key="new_chat_btn", use_container_width=True):
+        if st.button("＋  New Chat", key="new_chat_btn", width="stretch"):
             start_new_conversation_fn()
             st.rerun()
 
@@ -100,7 +100,7 @@ def render_sidebar(
                     placeholder="gsk_… or xai-…",
                 )
             with kc2:
-                test_key = st.button("✓", help="Test API connection", use_container_width=True)
+                test_key = st.button("✓", help="Test API connection", width="stretch")
 
             if api_key_input != st.session_state.api_key:
                 st.session_state.api_key = api_key_input
@@ -139,7 +139,7 @@ def render_sidebar(
             except Exception:
                 pass
             label = "Viewing: All Users" if st.session_state.admin_view_all else "Viewing: My Chats"
-            if st.button(label, key="admin_toggle", use_container_width=True):
+            if st.button(label, key="admin_toggle", width="stretch"):
                 st.session_state.admin_view_all = not st.session_state.admin_view_all
                 st.rerun()
 
@@ -158,7 +158,7 @@ def render_sidebar(
                 prefix = f"[{conv.get('username', '?')}] " if (is_admin and st.session_state.admin_view_all) else ""
                 title = (prefix + (conv["title"] or "New Chat"))[:40]
                 active = conv["id"] == st.session_state.conv_id
-                if st.button(("▶ " if active else "") + title, key=f"conv_{conv['id']}", use_container_width=True):
+                if st.button(("▶ " if active else "") + title, key=f"conv_{conv['id']}", width="stretch"):
                     load_conversation_fn(conv["id"])
                     st.session_state.page = "chat"
                     st.rerun()
@@ -173,7 +173,7 @@ def render_sidebar(
 
         with st.expander("📄 Documents & Export"):
             uploaded_files = st.file_uploader("Upload documents", type=["pdf", "docx"], accept_multiple_files=True, label_visibility="collapsed")
-            if uploaded_files and st.button("⚡ Ingest", use_container_width=True, type="primary"):
+            if uploaded_files and st.button("⚡ Ingest", width="stretch", type="primary"):
                 total_chunks = 0
                 with st.spinner("Ingesting…"):
                     for uploaded in uploaded_files:
@@ -195,7 +195,7 @@ def render_sidebar(
                         data=export_to_pdf_fn(messages, user["username"], st.session_state.module),
                         file_name=f"chat_{ts}.pdf",
                         mime="application/pdf",
-                        use_container_width=True,
+                        width="stretch",
                         key="dl_pdf",
                     )
                 except Exception:
@@ -206,14 +206,14 @@ def render_sidebar(
                         data=export_to_docx_fn(messages, user["username"], st.session_state.module),
                         file_name=f"chat_{ts}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True,
+                        width="stretch",
                         key="dl_docx",
                     )
                 except Exception:
                     pass
 
         st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
-        if st.button("⎋  Sign Out", key="signout_btn", use_container_width=True):
+        if st.button("⎋  Sign Out", key="signout_btn", width="stretch"):
             try:
                 st.query_params.clear()
             except Exception:
