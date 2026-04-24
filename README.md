@@ -13,6 +13,18 @@ Enterprise-oriented internal chatbot for PayGlobal implementation support using 
 
 After first successful admin login, clear `ADMIN_BOOTSTRAP_PASSWORD` in `.env`.
 
+## Admin Account Recovery (Locked Out)
+
+If you cannot sign in and need to reset/create the admin user locally:
+
+- Run `reset_admin.bat`, set a new password, then sign in with username `admin`.
+
+Advanced / non-interactive:
+
+```bash
+py -3 scripts/reset_admin_password.py --username admin --password "NewStrongPassword123"
+```
+
 ## Security Defaults
 
 - URL-based session tokens have been removed.
