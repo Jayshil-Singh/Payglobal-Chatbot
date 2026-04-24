@@ -37,199 +37,164 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ── Base ── */
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-.stApp { background: #070b14; color: #e6edf3; }
+html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
+.stApp{background:#070b14!important;color:#e6edf3}
+#MainMenu,footer,header{visibility:hidden}
+.block-container{padding:0.8rem 1.5rem 0 1.5rem!important;max-width:100%!important}
 
-/* ── Hide default chrome ── */
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 1.5rem 2rem 2rem 2rem; max-width: 100%; }
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"] {
-    background: #0d1117;
-    border-right: 1px solid rgba(48,54,61,0.8);
-}
-[data-testid="stSidebar"] .stMarkdown h3 {
-    color: #4f6ef7;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin: 1rem 0 0.4rem 0;
-}
-
-/* ── Sidebar buttons ── */
-[data-testid="stSidebar"] .stButton > button {
-    width: 100%;
-    background: transparent;
-    color: #8b949e;
-    border: 1px solid rgba(48,54,61,0.6);
-    border-radius: 8px;
-    font-size: 0.82rem;
-    padding: 0.45rem 0.8rem;
-    text-align: left;
-    transition: all 0.2s ease;
-    margin-bottom: 3px;
-}
-[data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(79,110,247,0.12);
-    color: #e6edf3;
-    border-color: rgba(79,110,247,0.4);
-}
-
-/* ── Selectbox ── */
-[data-testid="stSidebar"] .stSelectbox > div > div {
-    background: #161b27 !important;
-    border: 1px solid rgba(48,54,61,0.8) !important;
-    color: #e6edf3 !important;
-    border-radius: 8px !important;
-}
-
-/* ── Chat messages ── */
-[data-testid="stChatMessage"] {
-    background: #0d1117;
-    border: 1px solid rgba(48,54,61,0.6);
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.75rem;
+/* ── FIX THE WHITE BOTTOM INPUT BAR ── */
+[data-testid="stBottom"],[data-testid="stChatInputContainer"],
+.stChatInputContainer,section[data-testid="stBottom"]>div{
+    background:#070b14!important;
+    border-top:1px solid rgba(48,54,61,0.4)!important
 }
 
 /* ── Chat input ── */
-[data-testid="stChatInput"] textarea {
-    background: #161b27 !important;
-    border: 1px solid rgba(79,110,247,0.3) !important;
-    border-radius: 12px !important;
-    color: #e6edf3 !important;
-    font-family: 'Inter', sans-serif !important;
+[data-testid="stChatInput"]{
+    background:#111827!important;
+    border:1.5px solid rgba(79,110,247,0.25)!important;
+    border-radius:14px!important;
+    box-shadow:0 2px 16px rgba(0,0,0,0.5)!important;
+    transition:border-color .2s,box-shadow .2s!important
 }
-[data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(79,110,247,0.8) !important;
-    box-shadow: 0 0 0 2px rgba(79,110,247,0.15) !important;
+[data-testid="stChatInput"]:focus-within{
+    border-color:rgba(79,110,247,0.65)!important;
+    box-shadow:0 0 0 3px rgba(79,110,247,0.12),0 2px 16px rgba(0,0,0,0.5)!important
 }
-
-/* ── Primary button ── */
-.stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #4f6ef7, #7c3aed);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    padding: 0.6rem 1.5rem;
-    transition: all 0.25s ease;
+[data-testid="stChatInput"] textarea{
+    background:transparent!important;color:#e6edf3!important;
+    font-family:'Inter',sans-serif!important;font-size:0.92rem!important;
+    caret-color:#4f6ef7!important
 }
-.stButton > button[kind="primary"]:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(79,110,247,0.35);
+[data-testid="stChatInput"] textarea::placeholder{color:#3d4a5c!important}
+[data-testid="stChatInput"] button{
+    background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;
+    border-radius:10px!important;border:none!important;color:white!important
 }
 
-/* ── Expander ── */
-.streamlit-expanderHeader {
-    background: #161b27 !important;
-    border-radius: 8px !important;
-    color: #8b949e !important;
-    font-size: 0.8rem !important;
+/* ── Chat messages ── */
+[data-testid="stChatMessage"]{
+    background:#0b1120!important;
+    border:1px solid rgba(48,54,61,0.5)!important;
+    border-radius:14px!important;
+    padding:0.85rem 1.1rem!important;
+    margin-bottom:0.5rem!important;
+    transition:border-color .18s!important
+}
+[data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.2)!important}
+
+/* ── Hide ugly default avatars ── */
+[data-testid="chatAvatarIcon-user"],[data-testid="chatAvatarIcon-assistant"]{display:none!important}
+
+/* ── Tiny feedback / PDF buttons inside messages ── */
+[data-testid="stChatMessage"] .stButton>button{
+    padding:0.05rem 0.4rem!important;font-size:0.73rem!important;
+    min-height:0!important;height:1.4rem!important;line-height:1.4!important;
+    border-radius:6px!important;background:rgba(22,32,50,0.9)!important;
+    border:1px solid rgba(48,54,61,0.65)!important;color:#6b7a99!important;width:auto!important
+}
+[data-testid="stChatMessage"] .stButton>button:hover{
+    background:rgba(79,110,247,0.15)!important;color:#c9d1d9!important;
+    border-color:rgba(79,110,247,0.4)!important
+}
+[data-testid="stChatMessage"] [data-testid="stDownloadButton"] button{
+    padding:0.05rem 0.4rem!important;font-size:0.73rem!important;height:1.4rem!important;
+    background:rgba(79,110,247,0.1)!important;border:1px solid rgba(79,110,247,0.3)!important;
+    color:#7b9cff!important;border-radius:6px!important;width:auto!important
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"]{
+    background:linear-gradient(180deg,#0a0f1c,#070b14)!important;
+    border-right:1px solid rgba(48,54,61,0.4)!important
+}
+[data-testid="stSidebar"] .stMarkdown h3{
+    color:#4f6ef7;font-size:0.67rem;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;margin:1rem 0 0.35rem
+}
+[data-testid="stSidebar"] .stButton>button{
+    width:100%;background:transparent;color:#6b7a99;
+    border:1px solid rgba(48,54,61,0.45);border-radius:8px;
+    font-size:0.8rem;padding:0.36rem 0.7rem;text-align:left;
+    transition:all .18s;margin-bottom:2px
+}
+[data-testid="stSidebar"] .stButton>button:hover{
+    background:rgba(79,110,247,0.1);color:#e6edf3;border-color:rgba(79,110,247,0.35)
+}
+
+/* ── Selectbox ── */
+[data-testid="stSelectbox"]>div>div,[data-testid="stSidebar"] .stSelectbox>div>div{
+    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;
+    color:#e6edf3!important;border-radius:8px!important
 }
 
 /* ── Text inputs ── */
-.stTextInput > div > div > input,
-.stTextInput > div > div > input:focus {
-    background: #161b27 !important;
-    border: 1px solid rgba(48,54,61,0.8) !important;
-    color: #e6edf3 !important;
-    border-radius: 8px !important;
+.stTextInput>div>div>input{
+    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;
+    color:#e6edf3!important;border-radius:8px!important
+}
+.stTextInput>div>div>input:focus{
+    border-color:rgba(79,110,247,0.5)!important;
+    box-shadow:0 0 0 2px rgba(79,110,247,0.1)!important
 }
 
-/* ── Alerts / info ── */
-.stAlert { border-radius: 10px; }
-
-/* ── Logo card ── */
-.logo-card {
-    background: linear-gradient(135deg, rgba(79,110,247,0.15), rgba(124,58,237,0.1));
-    border: 1px solid rgba(79,110,247,0.25);
-    border-radius: 14px;
-    padding: 1.2rem;
-    text-align: center;
-    margin-bottom: 1rem;
+/* ── Primary button ── */
+.stButton>button[kind="primary"]{
+    background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;
+    color:white!important;border:none!important;border-radius:10px!important;
+    font-weight:600!important;padding:0.5rem 1.4rem!important;transition:all .22s!important
 }
-.logo-card h2 { color: #e6edf3; margin: 0; font-size: 1rem; font-weight: 700; }
-.logo-card p  { color: #8b949e; margin: 0.2rem 0 0 0; font-size: 0.75rem; }
-
-/* ── Login card ── */
-.login-card {
-    background: #0d1117;
-    border: 1px solid rgba(48,54,61,0.8);
-    border-radius: 16px;
-    padding: 2.5rem 2rem;
-    max-width: 420px;
-    margin: 0 auto;
-}
-.login-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #e6edf3;
-    text-align: center;
-    margin-bottom: 0.3rem;
-}
-.login-sub {
-    color: #8b949e;
-    text-align: center;
-    font-size: 0.85rem;
-    margin-bottom: 2rem;
+.stButton>button[kind="primary"]:hover{
+    transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(79,110,247,0.35)!important
 }
 
-/* ── Conversation item ── */
-.conv-item {
-    padding: 0.5rem 0.7rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    color: #8b949e;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* ── Expander ── */
+[data-testid="stExpander"] summary,.streamlit-expanderHeader{
+    background:#111827!important;border-radius:8px!important;
+    color:#8b949e!important;font-size:0.79rem!important
 }
-.conv-item:hover, .conv-item.active {
-    background: rgba(79,110,247,0.12);
-    color: #e6edf3;
-    border-color: rgba(79,110,247,0.3);
-}
+[data-testid="stExpander"]{border:1px solid rgba(48,54,61,0.45)!important;border-radius:8px!important}
 
-/* ── Badge ── */
-.badge {
-    display: inline-block;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-}
-.badge-blue  { background: rgba(79,110,247,0.2);  color: #4f6ef7; }
-.badge-green { background: rgba(16,185,129,0.2);  color: #10b981; }
-.badge-red   { background: rgba(239,68,68,0.2);   color: #ef4444; }
+/* ── Alerts ── */
+.stAlert{border-radius:10px!important}
 
 /* ── File uploader ── */
-[data-testid="stFileUploader"] {
-    background: #161b27;
-    border: 2px dashed rgba(79,110,247,0.3);
-    border-radius: 12px;
-    padding: 0.5rem;
+[data-testid="stFileUploader"]{
+    background:#111827;border:2px dashed rgba(79,110,247,0.22);border-radius:10px;padding:.4rem
 }
 
-/* ── Top header bar ── */
-.topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0 1rem 0;
-    border-bottom: 1px solid rgba(48,54,61,0.6);
-    margin-bottom: 1rem;
+/* ── Logo card ── */
+.logo-card{
+    background:linear-gradient(135deg,rgba(79,110,247,0.1),rgba(124,58,237,0.07));
+    border:1px solid rgba(79,110,247,0.18);border-radius:12px;
+    padding:.9rem;text-align:center;margin-bottom:.7rem
 }
-.topbar-title { font-size: 1.1rem; font-weight: 700; color: #e6edf3; }
-.topbar-user  { font-size: 0.8rem; color: #8b949e; }
+.logo-card h2{color:#e6edf3;margin:0;font-size:.92rem;font-weight:700}
+.logo-card p{color:#6b7a99;margin:.12rem 0 0;font-size:.7rem}
+
+/* ── Badge ── */
+.badge{display:inline-block;padding:.1rem .48rem;border-radius:999px;font-size:.67rem;font-weight:600}
+.badge-blue {background:rgba(79,110,247,.18);color:#7b9cff}
+.badge-green{background:rgba(16,185,129,.18);color:#34d399}
+.badge-red  {background:rgba(239,68,68,.18); color:#f87171}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+    padding:.35rem 0 .75rem;border-bottom:1px solid rgba(48,54,61,0.45);margin-bottom:.75rem}
+.topbar-title{font-size:.98rem;font-weight:700;color:#e6edf3}
+.topbar-user{font-size:.76rem;color:#6b7a99}
+
+/* ── Role labels in chat ── */
+.msg-label-user{font-size:.68rem;font-weight:700;color:#7b9cff;
+    text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+.msg-label-ai{font-size:.68rem;font-weight:700;color:#34d399;
+    text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+
+/* ── Dataframe ── */
+[data-testid="stDataFrame"]{border-radius:10px;overflow:hidden}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -456,19 +421,27 @@ def show_sidebar():
 
         st.divider()
 
-        # Conversation history
+        # Conversation history — role-based (#15)
         st.markdown("### 💬 Conversations")
-        convs = get_user_conversations(user["id"])
+        if is_admin and st.session_state.admin_view_all:
+            convs = get_all_conversations_admin()
+            st.caption("👥 Showing all users' conversations")
+        else:
+            convs = get_user_conversations(user["id"])
+
         if not convs:
             st.caption("No conversations yet.")
         for conv in convs:
             c1, c2 = st.columns([5, 1])
             with c1:
-                label = conv["title"] or "New Chat"
+                if is_admin and st.session_state.admin_view_all:
+                    label = f"[{conv.get('username','?')}] {conv['title'] or 'New Chat'}"
+                else:
+                    label = conv["title"] or "New Chat"
                 active = conv["id"] == st.session_state.conv_id
-                btn_style = "primary" if active else "secondary"
                 if st.button(f"{'▶ ' if active else ''}{label}", key=f"conv_{conv['id']}", use_container_width=True):
                     load_conversation(conv["id"])
+                    st.session_state.page = "chat"
                     st.rerun()
             with c2:
                 if st.button("🗑", key=f"del_{conv['id']}"):
@@ -509,51 +482,43 @@ def show_sidebar():
 
         st.divider()
 
-        # ── Export Conversation (#8) ──────────────────────────────────────
+        # ── Export Conversation (#10 / #14) ──────────────────────────────
         st.markdown("### 💾 Export Conversation")
         messages = st.session_state.get("messages", [])
         if not messages:
             st.caption("No messages to export yet.")
         else:
-            # Build markdown export
-            lines = [
-                f"# PayGlobal AI Assistant — Conversation Export",
-                f"**User:** {st.session_state.user['username']}",
-                f"**Module:** {st.session_state.module}",
-                f"**Exported:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                "",
-                "---",
-                "",
-            ]
-            for msg in messages:
-                role_label = "🧑 **You**" if msg["role"] == "user" else "🤖 **PayGlobal AI**"
-                lines.append(f"{role_label}")
-                lines.append("")
-                lines.append(msg["content"])
-                sources = msg.get("sources", [])
-                if sources and msg["role"] == "assistant":
-                    lines.append("")
-                    lines.append("*Sources:*")
-                    for src in sources:
-                        if isinstance(src, dict):
-                            file = src.get("file", "")
-                            page = src.get("page", "")
-                            lines.append(f"- `{file}`" + (f" — {page}" if page else ""))
-                        else:
-                            lines.append(f"- `{src}`")
-                lines.append("")
-                lines.append("---")
-                lines.append("")
+            ts    = datetime.now().strftime('%Y%m%d_%H%M')
+            uname = st.session_state.user['username']
+            mod   = st.session_state.module
 
-            export_text = "\n".join(lines)
-            filename = f"payglobal_chat_{datetime.now().strftime('%Y%m%d_%H%M')}.md"
-            st.download_button(
-                label="⬇️ Download as Markdown",
-                data=export_text.encode("utf-8"),
-                file_name=filename,
-                mime="text/markdown",
-                use_container_width=True,
-            )
+            # PDF (#10)
+            try:
+                pdf_bytes = export_to_pdf(messages, uname, mod)
+                st.download_button(
+                    label="⬇️ Download as PDF",
+                    data=pdf_bytes,
+                    file_name=f"payglobal_chat_{ts}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="dl_pdf",
+                )
+            except Exception as e:
+                st.caption(f"⚠️ PDF error: {e}")
+
+            # Word (.docx) (#14)
+            try:
+                docx_bytes = export_to_docx(messages, uname, mod)
+                st.download_button(
+                    label="⬇️ Download as Word (.docx)",
+                    data=docx_bytes,
+                    file_name=f"payglobal_chat_{ts}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    key="dl_docx",
+                )
+            except Exception as e:
+                st.caption(f"⚠️ Word error: {e}")
 
         st.divider()
 
@@ -628,7 +593,7 @@ def show_chat():
                 # ── Thumbs up/down feedback (#3) ──
                 if msg["role"] == "assistant" and msg.get("msg_id"):
                     msg_id = msg["msg_id"]
-                    col_up, col_dn, col_spacer = st.columns([1, 1, 8])
+                    col_up, col_dn, col_pdf, col_spacer = st.columns([1, 1, 2, 6])
                     with col_up:
                         if st.button("👍", key=f"up_{msg_id}_{idx}", help="Good answer"):
                             save_feedback(msg_id, st.session_state.user["id"], 1)
@@ -637,6 +602,24 @@ def show_chat():
                         if st.button("👎", key=f"dn_{msg_id}_{idx}", help="Bad answer"):
                             save_feedback(msg_id, st.session_state.user["id"], -1)
                             st.toast("Feedback recorded — we'll improve!", icon="👎")
+                    with col_pdf:
+                        # Per-answer PDF export (#10)
+                        try:
+                            ans_pdf = export_answer_pdf(
+                                msg["content"],
+                                msg.get("sources", []),
+                                st.session_state.user["username"],
+                            )
+                            st.download_button(
+                                label="📄 PDF",
+                                data=ans_pdf,
+                                file_name=f"payglobal_answer_{msg_id}.pdf",
+                                mime="application/pdf",
+                                key=f"pdf_{msg_id}_{idx}",
+                                help="Download this answer as PDF",
+                            )
+                        except Exception:
+                            pass
 
     # ── Handle example prompt click ──
     pending = st.session_state.pop("_pending_prompt", None)
@@ -653,6 +636,17 @@ def show_chat():
 def _handle_message(user_input: str):
     """Process a user message: save, run RAG, save response."""
     conv_id = st.session_state.conv_id
+    user    = st.session_state.user
+
+    # ── Rate limiting (#12) — skip for admins ──
+    if user["role"] != "admin":
+        count = get_request_count_last_hour(user["id"])
+        if count >= RATE_LIMIT_PER_HOUR:
+            st.warning(
+                f"⏳ Rate limit reached: you can send up to **{RATE_LIMIT_PER_HOUR} messages per hour**. "
+                f"You've sent **{count}** in the last 60 minutes. Please wait before trying again."
+            )
+            return
 
     # Add user message to UI
     st.session_state.messages.append({"role": "user", "content": user_input, "sources": []})
@@ -674,7 +668,11 @@ def _handle_message(user_input: str):
             try:
                 load_chain()
             except Exception as e:
-                st.error(f"Failed to load AI engine: {e}")
+                err = str(e).lower()
+                if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401")):
+                    st.error("🔑 Invalid API key — please update it in the sidebar and try again.")
+                else:
+                    st.error("⚠️ Could not start the AI engine. Please check your API key in the sidebar.")
                 return
 
     # Get AI response
@@ -688,7 +686,35 @@ def _handle_message(user_input: str):
                 if retries > 0:
                     st.caption(f"⚠️ Needed {retries} retry attempt(s) to reach Grok API.")
             except Exception as e:
-                answer  = f"⚠️ An error occurred: {e}\n\nPlease check your API key and try again."
+                err = str(e).lower()
+                if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401", "403")):
+                    answer = (
+                        "🔑 **Invalid API Key**\n\n"
+                        "Your Grok API key doesn't seem to be working. "
+                        "Please update it in the sidebar under **🔑 Grok API Key** and try again.\n\n"
+                        "You can get a key at [console.x.ai](https://console.x.ai/)."
+                    )
+                elif any(k in err for k in ("rate", "quota", "429", "too many")):
+                    answer = (
+                        "⏱️ **Too Many Requests**\n\n"
+                        "The AI service is temporarily busy. Please wait 30 seconds and try again."
+                    )
+                elif any(k in err for k in ("connect", "timeout", "network", "503", "502", "unavailable")):
+                    answer = (
+                        "🌐 **Connection Issue**\n\n"
+                        "Couldn't reach the AI service. Please check your internet connection and try again."
+                    )
+                elif any(k in err for k in ("index", "embed", "faiss", "no document")):
+                    answer = (
+                        "📄 **No Documents Indexed**\n\n"
+                        "Please upload PDF or DOCX files using the sidebar and click **⚡ Ingest Documents** first."
+                    )
+                else:
+                    answer = (
+                        "⚠️ **Something went wrong**\n\n"
+                        "Please try again in a moment. If the issue persists, "
+                        "verify your API key is correct in the sidebar."
+                    )
                 sources = []
 
         st.markdown(answer)
@@ -714,6 +740,170 @@ def _handle_message(user_input: str):
         "msg_id":  msg_id,
     })
     st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ANALYTICS DASHBOARD — admin only (#13)
+# ══════════════════════════════════════════════════════════════════════════
+def show_analytics():
+    """Admin-only analytics dashboard with usage stats and charts."""
+    user = st.session_state.user
+    if user["role"] != "admin":
+        st.error("⛔ Access denied. Admin only.")
+        return
+
+    import plotly.graph_objects as go
+    import plotly.express as px
+
+    st.markdown("""
+    <div class='topbar'>
+        <span class='topbar-title'>📊 Analytics Dashboard</span>
+        <span class='topbar-user'>Admin view · Real-time data</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.spinner("Loading analytics…"):
+        data = get_analytics_data()
+
+    # ── KPI cards ──────────────────────────────────────────────────────────
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_style = (
+        "background:#0d1117; border:1px solid rgba(48,54,61,0.8); "
+        "border-radius:12px; padding:1.2rem; text-align:center;"
+    )
+    def kpi(col, icon, label, value, color="#4f6ef7"):
+        col.markdown(f"""
+        <div style='{kpi_style}'>
+            <div style='font-size:1.8rem;'>{icon}</div>
+            <div style='font-size:2rem; font-weight:700; color:{color};'>{value}</div>
+            <div style='font-size:0.78rem; color:#8b949e; margin-top:0.2rem;'>{label}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    kpi(k1, "👥", "Total Users",          data["total_users"],         "#4f6ef7")
+    kpi(k2, "💬", "Conversations",         data["total_conversations"], "#10b981")
+    kpi(k3, "📨", "Total Messages",        data["total_messages"],      "#f59e0b")
+    kpi(k4, "❓", "User Questions",        data["total_questions"],     "#ef4444")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Daily activity chart ───────────────────────────────────────────────
+    col_chart, col_pie = st.columns([3, 2])
+
+    with col_chart:
+        st.markdown("#### 📅 Questions per Day (Last 14 Days)")
+        daily = data.get("daily_messages", [])
+        if daily:
+            days  = [d["day"]  for d in daily]
+            cnts  = [d["cnt"]  for d in daily]
+            fig = go.Figure(go.Bar(
+                x=days, y=cnts,
+                marker_color="#4f6ef7",
+                marker_line_color="rgba(79,110,247,0.3)",
+                marker_line_width=1,
+            ))
+            fig.update_layout(
+                paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                font=dict(color="#e6edf3", size=11),
+                xaxis=dict(gridcolor="rgba(48,54,61,0.5)", tickangle=-35),
+                yaxis=dict(gridcolor="rgba(48,54,61,0.5)"),
+                margin=dict(l=0, r=0, t=10, b=0),
+                height=280,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No activity data yet.")
+
+    with col_pie:
+        st.markdown("#### 📦 Module Usage")
+        modules = data.get("module_usage", [])
+        if modules:
+            labels = [m["module"] for m in modules]
+            values = [m["cnt"]    for m in modules]
+            fig2 = go.Figure(go.Pie(
+                labels=labels, values=values,
+                hole=0.45,
+                marker=dict(colors=px.colors.qualitative.Plotly),
+                textfont=dict(size=11),
+            ))
+            fig2.update_layout(
+                paper_bgcolor="#0d1117",
+                font=dict(color="#e6edf3", size=11),
+                margin=dict(l=0, r=0, t=10, b=0),
+                height=280,
+                showlegend=True,
+                legend=dict(bgcolor="#0d1117", font=dict(size=10)),
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        else:
+            st.info("No module data yet.")
+
+    # ── Feedback + Top Users ───────────────────────────────────────────────
+    col_fb, col_users = st.columns([1, 2])
+
+    with col_fb:
+        st.markdown("#### 👍 Feedback Satisfaction")
+        fb = data.get("feedback", {})
+        total_fb = fb.get("total", 0)
+        up  = fb.get("thumbs_up",   0) or 0
+        dn  = fb.get("thumbs_down", 0) or 0
+        if total_fb:
+            pct = round(up / total_fb * 100)
+            fig3 = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=pct,
+                number={"suffix": "%", "font": {"color": "#e6edf3", "size": 32}},
+                gauge={
+                    "axis": {"range": [0, 100], "tickcolor": "#8b949e"},
+                    "bar":  {"color": "#10b981"},
+                    "bgcolor": "#161b27",
+                    "steps": [
+                        {"range": [0,  50], "color": "rgba(239,68,68,0.15)"},
+                        {"range": [50, 75], "color": "rgba(245,158,11,0.15)"},
+                        {"range": [75,100], "color": "rgba(16,185,129,0.15)"},
+                    ],
+                },
+            ))
+            fig3.update_layout(
+                paper_bgcolor="#0d1117",
+                font=dict(color="#e6edf3"),
+                margin=dict(l=10, r=10, t=20, b=10),
+                height=220,
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+            st.markdown(
+                f"<div style='text-align:center; font-size:0.8rem; color:#8b949e;'>"
+                f"👍 {up} &nbsp;|&nbsp; 👎 {dn} &nbsp;|&nbsp; Total {total_fb}</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("No feedback yet.")
+
+    with col_users:
+        st.markdown("#### 🏆 Most Active Users")
+        top_users = data.get("top_users", [])
+        if top_users:
+            import pandas as pd
+            df = pd.DataFrame(top_users)
+            df.columns = ["Username", "Questions Asked"]
+            df.index   = df.index + 1
+            st.dataframe(df, use_container_width=True, height=230)
+        else:
+            st.info("No user activity yet.")
+
+    st.divider()
+
+    # ── User management table ──────────────────────────────────────────────
+    st.markdown("#### 👤 Registered Users")
+    all_users = get_all_users()
+    if all_users:
+        import pandas as pd
+        udf = pd.DataFrame(all_users)[["username", "email", "role", "created_at", "last_login"]]
+        udf.columns = ["Username", "Email", "Role", "Registered", "Last Login"]
+        udf.index   = udf.index + 1
+        st.dataframe(udf, use_container_width=True)
+    else:
+        st.info("No users found.")
 
 
 # ══════════════════════════════════════════════════════════════════════════
