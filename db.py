@@ -398,6 +398,15 @@ def set_password_and_change_flag(user_id: int, new_password_hash: str, must_chan
         )
 
 
+def set_must_change_password(user_id: int, must_change_password: bool) -> None:
+    """Update first-login password-change requirement flag only."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET must_change_password = ? WHERE id = ?",
+            (1 if must_change_password else 0, user_id),
+        )
+
+
 def get_recent_audit_log(limit: int = 100) -> List[Dict]:
     """Return the most recent user messages across all conversations for audit."""
     with get_conn() as conn:
