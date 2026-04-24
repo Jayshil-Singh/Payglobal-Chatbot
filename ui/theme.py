@@ -81,6 +81,12 @@ CSS_LIGHT = """
 [data-testid="stToolbar"]{background:transparent!important}
 [data-testid="stBottom"],[data-testid="stChatInputContainer"],section[data-testid="stBottom"]>div,div[data-testid="stBottom"]>div{
     background:#f0f2f8!important;border-top:1px solid rgba(200,210,230,0.7)!important}
+[data-testid="stMain"]{
+    background:#f0f2f8!important;color:#1a1f36!important
+}
+[data-testid="stMain"] h1,[data-testid="stMain"] h2,[data-testid="stMain"] h3,[data-testid="stMain"] h4,[data-testid="stMain"] p,[data-testid="stMain"] span,[data-testid="stMain"] label{
+    color:#1a1f36!important
+}
 [data-testid="stChatInput"]{
     background:#ffffff!important;border:1.5px solid rgba(79,110,247,0.3)!important;
     border-radius:14px!important;box-shadow:0 2px 12px rgba(79,110,247,0.08)!important}
@@ -96,6 +102,13 @@ CSS_LIGHT = """
 [data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.3)!important}
 [data-testid="stSidebar"] *{color:#1a1f36!important}
 [data-testid="stSidebar"] .stButton>button{box-shadow:none!important}
+[data-testid="stMain"] .stButton>button{
+    background:#ffffff!important;border:1px solid rgba(180,193,218,0.9)!important;color:#1a1f36!important;
+    box-shadow:none!important
+}
+[data-testid="stMain"] .stButton>button:hover{
+    border-color:rgba(79,110,247,0.55)!important;color:#1a1f36!important
+}
 [data-testid="stSidebar"] .stButton>button[kind="secondary"]{
     background:#ffffff!important;border:1px solid rgba(180,193,218,0.85)!important;color:#1a1f36!important
 }
@@ -107,6 +120,51 @@ CSS_LIGHT = """
 }
 [data-testid="stMain"] .stButton>button[kind="secondary"]:hover{
     border-color:rgba(79,110,247,0.55)!important;color:#1a1f36!important
+}
+[data-testid="stMain"] .stButton>button[kind="primary"]{
+    color:#ffffff!important;background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;border:none!important
+}
+[data-testid="stMain"] .stTextInput input,
+[data-testid="stMain"] textarea,
+[data-testid="stMain"] [data-baseweb="select"],
+[data-testid="stMain"] [data-baseweb="input"],
+[data-testid="stMain"] [data-baseweb="base-input"]{
+    background:#ffffff!important;border-color:rgba(180,193,218,0.9)!important;color:#1a1f36!important
+}
+[data-testid="stMain"] [data-baseweb="select"] *{
+    color:#1a1f36!important
+}
+[data-testid="stMain"] [data-baseweb="input"] input,
+[data-testid="stMain"] [data-baseweb="base-input"] input{
+    color:#1a1f36!important;background:#ffffff!important
+}
+[data-testid="stMain"] .stTextInput input::placeholder,
+[data-testid="stMain"] textarea::placeholder{
+    color:#94a3b8!important
+}
+[data-testid="stMain"] .stNumberInput [data-baseweb="input"]{
+    background:#ffffff!important;border-color:rgba(180,193,218,0.9)!important
+}
+[data-testid="stMain"] .stNumberInput button{
+    background:#ffffff!important;color:#1a1f36!important;border-color:rgba(180,193,218,0.9)!important
+}
+[data-testid="stMain"] .stTabs [data-baseweb="tab-list"]{
+    background:#eef2ff!important;border:1px solid rgba(180,193,218,0.8)!important
+}
+[data-testid="stMain"] .stTabs [data-baseweb="tab"]{
+    color:#334155!important
+}
+[data-testid="stMain"] .stTabs [aria-selected="true"]{
+    color:#1e40af!important;border-bottom-color:#4f6ef7!important
+}
+[data-testid="stMain"] .stMarkdown code{
+    background:#eef2ff!important;color:#1e293b!important
+}
+[data-testid="stMain"] [data-testid="stDataFrame"]{
+    background:#ffffff!important;border:1px solid rgba(180,193,218,0.85)!important;border-radius:10px!important
+}
+[data-testid="stMain"] [data-testid="stDataFrame"] *{
+    color:#1a1f36!important
 }
 [data-testid="stSidebar"] .stButton>button[kind="primary"]{
     color:#ffffff!important
