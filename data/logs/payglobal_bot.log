@@ -17332,3 +17332,19 @@
 [2026-04-24 18:08:30] INFO     db — Database initialized.
 [2026-04-24 18:08:30] INFO     auth — Admin bootstrap skipped (ADMIN_BOOTSTRAP_PASSWORD is empty).
 [2026-04-24 18:08:30] INFO     db — Database initialized.
+[2026-04-24 18:10:58] INFO     db — Database initialized.
+[2026-04-24 18:10:58] INFO     auth — New user registered: alice (id=1, role=user)
+[2026-04-24 18:10:59] INFO     auth — Login successful: alice
+[2026-04-24 18:10:59] INFO     db — Database initialized.
+[2026-04-24 18:10:59] INFO     db — Database initialized.
+[2026-04-24 18:10:59] INFO     db — Database initialized.
+[2026-04-24 18:10:59] INFO     auth — Admin bootstrap skipped (ADMIN_BOOTSTRAP_PASSWORD is empty).
+[2026-04-24 18:10:59] INFO     db — Database initialized.
+[2026-04-24 18:11:30] INFO     db — Database initialized.
+[2026-04-24 18:11:30] INFO     auth — New user registered: alice (id=1, role=user)
+[2026-04-24 18:11:30] INFO     auth — Login successful: alice
+[2026-04-24 18:11:30] INFO     db — Database initialized.
+[2026-04-24 18:11:30] INFO     db — Database initialized.
+[2026-04-24 18:11:30] INFO     db — Database initialized.
+[2026-04-24 18:11:30] INFO     auth — Admin bootstrap skipped (ADMIN_BOOTSTRAP_PASSWORD is empty).
+[2026-04-24 18:11:30] INFO     db — Database initialized.
