@@ -2,8 +2,10 @@
 Authentication: bcrypt-based password hashing + login/register logic.
 """
 import bcrypt
+import secrets
+import string
 from typing import Optional, Dict
-from db import init_db, create_user, get_user, update_last_login
+from db import init_db, create_user, get_user, reset_user_password, update_last_login
 from config import DEFAULT_ADMIN_USER, DEFAULT_ADMIN_PASS
 from utils.logger import get_logger
 
@@ -65,4 +67,22 @@ def register(username: str, password: str, email: str = "", role: str = "user") 
     )
     log.info(f"New user registered: {username} (id={uid}, role={role})")
     return get_user(username)
+
+
+def generate_temp_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def set_new_password(user_id: int, new_password: str, require_change_on_next_login: bool = False) -> None:
+    if len(new_password) < 8:
+        raise ValueError("Password must be at least 8 characters.")
+    # Import lazily for compatibility during rolling updates/hot reloads.
+    try:
+        from db import set_password_and_change_flag
+
+        set_password_and_change_flag(user_id, hash_password(new_password), require_change_on_next_login)
+    except Exception:
+        # Fallback keeps login functional if older db module is still loaded.
+        reset_user_password(user_id, hash_password(new_password))
 

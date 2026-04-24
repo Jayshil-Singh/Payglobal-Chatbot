@@ -6,8 +6,8 @@ This file intentionally stays small and delegates to UI + service modules.
 
 import streamlit as st
 
-from auth import bootstrap_admin, login, register
-from config import APP_TITLE, GROK_API_KEY, PAYGLOBAL_MODULES, RATE_LIMIT_PER_HOUR, UPLOADS_DIR
+from auth import bootstrap_admin, login, register, set_new_password
+from config import APP_TITLE, GROK_API_KEY, PAYGLOBAL_MODULES, RATE_LIMIT_PER_HOUR, SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USER, UPLOADS_DIR
 from db import (
     delete_conversation,
     delete_user,
@@ -31,7 +31,7 @@ from services.chat_service import (
 from services.state import init_state as init_app_state
 from ui.admin_view import render_admin_panel
 from ui.analytics_view import render_analytics
-from ui.auth_view import render_login_page
+from ui.auth_view import render_force_password_change, render_login_page
 from ui.chat_view import render_chat
 from ui.sidebar_view import render_sidebar
 from ui.theme import apply_theme as apply_enterprise_theme
@@ -75,6 +75,10 @@ def show_login_page() -> None:
     render_login_page(login_fn=login, register_fn=register, default_api_key=GROK_API_KEY)
 
 
+def show_force_password_change() -> None:
+    render_force_password_change(set_new_password_fn=set_new_password)
+
+
 def show_sidebar() -> None:
     render_sidebar(
         modules=PAYGLOBAL_MODULES,
@@ -109,6 +113,10 @@ def show_admin_panel() -> None:
     render_admin_panel(
         uploads_dir=UPLOADS_DIR,
         rate_limit_per_hour=RATE_LIMIT_PER_HOUR,
+        smtp_host=SMTP_HOST,
+        smtp_port=SMTP_PORT,
+        smtp_user=SMTP_USER,
+        smtp_password=SMTP_PASSWORD,
         get_analytics_data_fn=get_analytics_data,
         get_all_users_fn=get_all_users,
         update_user_role_fn=update_user_role,
@@ -120,6 +128,8 @@ def show_admin_panel() -> None:
 
 if not st.session_state.authenticated:
     show_login_page()
+elif st.session_state.user and st.session_state.user.get("must_change_password"):
+    show_force_password_change()
 else:
     try:
         show_sidebar()

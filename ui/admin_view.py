@@ -4,15 +4,20 @@ from pathlib import Path
 
 import streamlit as st
 
-from auth import hash_password, register as auth_register
+from auth import generate_temp_password, hash_password, register as auth_register, set_new_password
 from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
 from ingest import ingest_file, index_exists
+from utils.mailer import send_email
 
 
 def render_admin_panel(
     *,
     uploads_dir,
     rate_limit_per_hour: int,
+    smtp_host: str,
+    smtp_port: int,
+    smtp_user: str,
+    smtp_password: str,
     get_analytics_data_fn,
     get_all_users_fn,
     update_user_role_fn,
@@ -21,9 +26,32 @@ def render_admin_panel(
     get_recent_audit_log_fn,
 ) -> None:
     user = st.session_state.user
+    is_dark = st.session_state.get("theme", "dark") == "dark"
     if user["role"] != "admin":
         st.error("⛔ Access denied. Admin only.")
         return
+
+    card_bg = "#0d1117" if is_dark else "#ffffff"
+    card_border = "rgba(48,54,61,0.8)" if is_dark else "rgba(180,193,218,0.85)"
+    label_color = "#8b949e" if is_dark else "#64748b"
+    value_color = "#e6edf3" if is_dark else "#0f172a"
+
+    def render_stat_card(col, label: str, value: str) -> None:
+        col.markdown(
+            f"""
+            <div style="
+                background:{card_bg};
+                border:1px solid {card_border};
+                border-radius:12px;
+                padding:.7rem .8rem;
+                min-height:88px;
+            ">
+                <div style="font-size:.73rem;color:{label_color};margin-bottom:.35rem;">{label}</div>
+                <div style="font-size:2rem;line-height:1.05;font-weight:700;color:{value_color};">{value}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown(
         """
@@ -41,9 +69,9 @@ def render_admin_panel(
         idx_ok = index_exists()
         st.markdown("#### 🔍 Live Status")
         sc1, sc2, sc3, sc4 = st.columns(4)
-        sc1.metric("Vector Index", "✅ Ready" if idx_ok else "❌ Missing")
-        sc2.metric("LLM Model", GROK_MODEL.split("/")[-1])
-        sc3.metric("API Provider", "Groq (free)" if "groq" in GROK_BASE_URL else "xAI")
+        render_stat_card(sc1, "Vector Index", "✅ Ready" if idx_ok else "❌ Missing")
+        render_stat_card(sc2, "LLM Model", GROK_MODEL.split("/")[-1])
+        render_stat_card(sc3, "API Provider", "Groq (free)" if "groq" in GROK_BASE_URL else "xAI")
 
         faiss_chunks = 0
         if idx_ok:
@@ -56,16 +84,16 @@ def render_admin_panel(
             except Exception:
                 # Keep panel responsive even if manifest parsing fails.
                 faiss_chunks = 0
-        sc4.metric("Indexed Chunks", faiss_chunks)
+        render_stat_card(sc4, "Indexed Chunks", str(faiss_chunks))
 
         st.divider()
         data = get_analytics_data_fn()
         st.markdown("#### 📊 Database Totals")
         d1, d2, d3, d4 = st.columns(4)
-        d1.metric("Users", data["total_users"])
-        d2.metric("Conversations", data["total_conversations"])
-        d3.metric("Messages", data["total_messages"])
-        d4.metric("User Questions", data["total_questions"])
+        render_stat_card(d1, "Users", str(data["total_users"]))
+        render_stat_card(d2, "Conversations", str(data["total_conversations"]))
+        render_stat_card(d3, "Messages", str(data["total_messages"]))
+        render_stat_card(d4, "User Questions", str(data["total_questions"]))
 
         st.divider()
         fb = data.get("feedback", {})
@@ -85,7 +113,7 @@ def render_admin_panel(
         for item in all_users:
             is_me = item["id"] == user["id"]
             with st.container():
-                c1, c2, c3, c4, c5 = st.columns([2.2, 2.5, 1.5, 2.8, 0.8])
+                c1, c2, c3, c4, c5, c6 = st.columns([2.2, 2.4, 1.4, 2.6, 1.5, 0.8])
                 badge = "🔵" if item["role"] == "admin" else "⚪"
                 c1.markdown(f"{badge} **{item['username']}** {'*(you)*' if is_me else ''}")
                 c2.markdown(f"`{item.get('email') or '—'}`")
@@ -111,6 +139,35 @@ def render_admin_panel(
                                 st.warning("Min 6 characters required.")
 
                 with c5:
+                    if not is_me and st.button("Resend Temp Password", key=f"temp_{item['id']}", help=f"Send temporary password to {item['username']}", width="stretch"):
+                        if not item.get("email"):
+                            st.warning(f"{item['username']} has no email address.")
+                        elif not (smtp_user and smtp_password):
+                            st.error("SMTP is not configured. Set SMTP_USER and SMTP_PASSWORD in .env.")
+                        else:
+                            try:
+                                temp_password = generate_temp_password()
+                                set_new_password(item["id"], temp_password, True)
+                                send_email(
+                                    smtp_host=smtp_host,
+                                    smtp_port=smtp_port,
+                                    smtp_user=smtp_user,
+                                    smtp_password=smtp_password,
+                                    to_email=item["email"],
+                                    subject="PayGlobal AI - temporary password reset",
+                                    body=(
+                                        f"Hello {item['username']},\n\n"
+                                        "An administrator has reset your account access.\n\n"
+                                        f"Username: {item['username']}\n"
+                                        f"Temporary password: {temp_password}\n\n"
+                                        "You must change this password immediately after login.\n"
+                                    ),
+                                )
+                                st.toast(f"✉️ Temporary password sent to {item['email']}")
+                            except Exception as exc:
+                                st.error(f"Failed to send temp password: {exc}")
+
+                with c6:
                     if not is_me and st.button("🗑️", key=f"delu_{item['id']}", help=f"Delete {item['username']}"):
                         delete_user_fn(item["id"])
                         st.toast(f"🗑️ Deleted {item['username']}")
@@ -124,18 +181,41 @@ def render_admin_panel(
                 nu_user = st.text_input("Username", placeholder="Enter username")
                 nu_email = st.text_input("Email", placeholder="user@company.com")
             with nu2:
-                nu_pw = st.text_input("Password", placeholder="Min 8 chars", type="password")
                 nu_role = st.selectbox("Role", ["user", "admin"])
-            if st.form_submit_button("➕ Create User", type="primary"):
-                if nu_user and nu_pw and len(nu_pw) >= 8:
+            if st.form_submit_button("➕ Create User + Send Temp Password", type="primary"):
+                if nu_user and nu_email:
                     try:
-                        auth_register(nu_user, nu_pw, nu_email, nu_role)
-                        st.success(f"✅ User **{nu_user}** created as `{nu_role}`")
+                        temp_password = generate_temp_password()
+                        created_user = auth_register(nu_user, temp_password, nu_email, nu_role)
+                        set_new_password(created_user["id"], temp_password, True)
+
+                        if smtp_user and smtp_password:
+                            send_email(
+                                smtp_host=smtp_host,
+                                smtp_port=smtp_port,
+                                smtp_user=smtp_user,
+                                smtp_password=smtp_password,
+                                to_email=nu_email.strip(),
+                                subject="PayGlobal AI account created - temporary password",
+                                body=(
+                                    f"Hello {nu_user},\n\n"
+                                    "Your PayGlobal AI account has been created.\n\n"
+                                    f"Username: {nu_user.strip().lower()}\n"
+                                    f"Temporary password: {temp_password}\n\n"
+                                    "Please log in and change your password immediately.\n"
+                                ),
+                            )
+                            st.success(f"✅ User **{nu_user}** created as `{nu_role}`. Temporary password emailed.")
+                        else:
+                            st.warning("User created, but SMTP is not configured. Share temporary password securely.")
+                            st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
                         st.rerun()
                     except ValueError as exc:
                         st.error(str(exc))
+                    except Exception as exc:
+                        st.error(f"User created, but email failed: {exc}")
                 else:
-                    st.error("Username required and password must be ≥ 8 characters.")
+                    st.error("Username and email are required.")
 
     with tabs[2]:
         st.markdown("#### 📂 Uploaded Files")

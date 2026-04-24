@@ -42,6 +42,7 @@ def init_db():
                 password_hash TEXT NOT NULL,
                 email         TEXT,
                 role          TEXT DEFAULT 'user',
+                must_change_password INTEGER DEFAULT 0,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login    TIMESTAMP
             );
@@ -94,6 +95,9 @@ def init_db():
             CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_message_user
             ON feedback (message_id, user_id);
         """)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "must_change_password" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
     log.info("Database initialized.")
 
 
@@ -382,6 +386,15 @@ def reset_user_password(user_id: int, new_password_hash: str) -> None:
         conn.execute(
             "UPDATE users SET password_hash = ? WHERE id = ?",
             (new_password_hash, user_id),
+        )
+
+
+def set_password_and_change_flag(user_id: int, new_password_hash: str, must_change_password: bool) -> None:
+    """Overwrite password hash and update first-login password-change requirement."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ?, must_change_password = ? WHERE id = ?",
+            (new_password_hash, 1 if must_change_password else 0, user_id),
         )
 
 

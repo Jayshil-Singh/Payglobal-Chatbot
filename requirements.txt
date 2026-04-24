@@ -19,3 +19,4 @@ plotly>=5.22.0
 
 # Local embeddings (free, no API key) — downloads ~90 MB model on first run
 sentence-transformers>=2.7.0
+torchvision>=0.26.0

@@ -65,3 +65,9 @@ ENABLE_RERANKER = os.getenv("ENABLE_RERANKER", "false").lower() == "true"
 # ── Rate Limiting ──────────────────────────────────────────────────────────
 RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "50"))
 
+# ── SMTP (new user onboarding emails) ──────────────────────────────────────
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+

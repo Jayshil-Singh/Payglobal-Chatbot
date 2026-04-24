@@ -84,8 +84,42 @@ CSS_LIGHT = """
 [data-testid="stMain"]{
     background:#f0f2f8!important;color:#1a1f36!important
 }
-[data-testid="stMain"] h1,[data-testid="stMain"] h2,[data-testid="stMain"] h3,[data-testid="stMain"] h4,[data-testid="stMain"] p,[data-testid="stMain"] span,[data-testid="stMain"] label{
+[data-testid="stMain"] h1,[data-testid="stMain"] h2,[data-testid="stMain"] h3,[data-testid="stMain"] h4,[data-testid="stMain"] p,[data-testid="stMain"] span,[data-testid="stMain"] label,[data-testid="stMain"] div{
     color:#1a1f36!important
+}
+[data-testid="stMarkdownContainer"],[data-testid="stMarkdownContainer"] *{
+    color:#1a1f36!important
+}
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{
+    color:#64748b!important
+}
+[data-testid="stMetricLabel"],[data-testid="stMetricLabel"] *{
+    color:#64748b!important
+}
+[data-testid="stMetricValue"],[data-testid="stMetricValue"] *{
+    color:#0f172a!important
+}
+[data-testid="stMetric"]{
+    background:#ffffff!important;
+    border:1px solid rgba(180,193,218,0.85)!important;
+    border-radius:10px!important;
+    padding:.6rem .75rem!important;
+}
+[data-testid="stMetric"] label,
+[data-testid="stMetric"] [data-testid="stMetricLabel"],
+[data-testid="stMetric"] [data-testid="stMetricLabel"] *{
+    color:#64748b!important;
+    opacity:1!important;
+}
+[data-testid="stMetric"] [data-testid="stMetricValue"],
+[data-testid="stMetric"] [data-testid="stMetricValue"] *{
+    color:#0f172a!important;
+    opacity:1!important;
+    text-shadow:none!important;
+}
+[data-testid="stMetric"] [data-testid="stMetricDelta"],
+[data-testid="stMetric"] [data-testid="stMetricDelta"] *{
+    opacity:1!important;
 }
 [data-testid="stChatInput"]{
     background:#ffffff!important;border:1.5px solid rgba(79,110,247,0.3)!important;
@@ -105,6 +139,14 @@ CSS_LIGHT = """
 [data-testid="stMain"] .stButton>button{
     background:#ffffff!important;border:1px solid rgba(180,193,218,0.9)!important;color:#1a1f36!important;
     box-shadow:none!important
+}
+[data-testid="stMain"] button[data-testid^="stBaseButton-secondary"],
+[data-testid="stMain"] button[data-testid^="baseButton-secondary"]{
+    background:#ffffff!important;border:1px solid rgba(180,193,218,0.9)!important;color:#1a1f36!important
+}
+[data-testid="stMain"] button[data-testid^="stBaseButton-secondary"]:hover,
+[data-testid="stMain"] button[data-testid^="baseButton-secondary"]:hover{
+    border-color:rgba(79,110,247,0.55)!important;color:#1a1f36!important
 }
 [data-testid="stMain"] .stButton>button:hover{
     border-color:rgba(79,110,247,0.55)!important;color:#1a1f36!important
@@ -154,11 +196,18 @@ CSS_LIGHT = """
 [data-testid="stMain"] .stTabs [data-baseweb="tab"]{
     color:#334155!important
 }
+[data-testid="stMain"] .stTabs [data-baseweb="tab-panel"],
+[data-testid="stMain"] .stTabs [data-baseweb="tab-panel"] *{
+    color:#1a1f36!important
+}
 [data-testid="stMain"] .stTabs [aria-selected="true"]{
     color:#1e40af!important;border-bottom-color:#4f6ef7!important
 }
 [data-testid="stMain"] .stMarkdown code{
     background:#eef2ff!important;color:#1e293b!important
+}
+[data-testid="stMain"] [data-testid="stExpander"]{
+    background:#ffffff!important;border:1px solid rgba(180,193,218,0.85)!important
 }
 [data-testid="stMain"] [data-testid="stDataFrame"]{
     background:#ffffff!important;border:1px solid rgba(180,193,218,0.85)!important;border-radius:10px!important
