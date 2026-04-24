@@ -7,7 +7,19 @@ This file intentionally stays small and delegates to UI + service modules.
 import streamlit as st
 
 from auth import bootstrap_admin, login, register, set_new_password
-from config import APP_TITLE, GROK_API_KEY, PAYGLOBAL_MODULES, RATE_LIMIT_PER_HOUR, SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USER, UPLOADS_DIR
+from config import (
+    APP_TITLE,
+    GROK_API_KEY,
+    PAYGLOBAL_MODULES,
+    RATE_LIMIT_PER_HOUR,
+    SENDGRID_API_KEY,
+    SENDGRID_FROM_EMAIL,
+    SMTP_HOST,
+    SMTP_PASSWORD,
+    SMTP_PORT,
+    SMTP_USER,
+    UPLOADS_DIR,
+)
 from db import (
     delete_conversation,
     delete_user,
@@ -117,6 +129,8 @@ def show_admin_panel() -> None:
         smtp_port=SMTP_PORT,
         smtp_user=SMTP_USER,
         smtp_password=SMTP_PASSWORD,
+        sendgrid_api_key=SENDGRID_API_KEY,
+        sendgrid_from_email=SENDGRID_FROM_EMAIL,
         get_analytics_data_fn=get_analytics_data,
         get_all_users_fn=get_all_users,
         update_user_role_fn=update_user_role,

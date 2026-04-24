@@ -18,6 +18,8 @@ def render_admin_panel(
     smtp_port: int,
     smtp_user: str,
     smtp_password: str,
+    sendgrid_api_key: str,
+    sendgrid_from_email: str,
     get_analytics_data_fn,
     get_all_users_fn,
     update_user_role_fn,
@@ -162,6 +164,8 @@ def render_admin_panel(
                                         f"Temporary password: {temp_password}\n\n"
                                         "You must change this password immediately after login.\n"
                                     ),
+                                    sendgrid_api_key=sendgrid_api_key,
+                                    sendgrid_from_email=sendgrid_from_email,
                                 )
                                 st.toast(f"✉️ Temporary password sent to {item['email']}")
                             except Exception as exc:
@@ -184,6 +188,7 @@ def render_admin_panel(
                 nu_role = st.selectbox("Role", ["user", "admin"])
             if st.form_submit_button("➕ Create User + Send Temp Password", type="primary"):
                 if nu_user and nu_email:
+                    temp_password = None
                     try:
                         temp_password = generate_temp_password()
                         created_user = auth_register(nu_user, temp_password, nu_email, nu_role)
@@ -204,6 +209,8 @@ def render_admin_panel(
                                     f"Temporary password: {temp_password}\n\n"
                                     "Please log in and change your password immediately.\n"
                                 ),
+                                    sendgrid_api_key=sendgrid_api_key,
+                                    sendgrid_from_email=sendgrid_from_email,
                             )
                             st.success(f"✅ User **{nu_user}** created as `{nu_role}`. Temporary password emailed.")
                         else:
@@ -213,7 +220,14 @@ def render_admin_panel(
                     except ValueError as exc:
                         st.error(str(exc))
                     except Exception as exc:
-                        st.error(f"User created, but email failed: {exc}")
+                        st.error(
+                            "User created, but email failed. "
+                            "Check SMTP secrets (host/user/password) and try again.\n\n"
+                            f"Details: {exc}"
+                        )
+                        if temp_password:
+                            st.warning("Share these temporary credentials securely with the user:")
+                            st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
                 else:
                     st.error("Username and email are required.")
 
