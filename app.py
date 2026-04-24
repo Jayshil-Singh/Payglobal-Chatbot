@@ -5,6 +5,7 @@ import streamlit as st
 import json
 from pathlib import Path
 from datetime import datetime
+import streamlit.components.v1 as _components
 
 # ── Page config MUST be first ──────────────────────────────────────────────
 st.set_page_config(
@@ -1230,6 +1231,81 @@ def show_admin_panel():
             )
 
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# FLOATING SIDEBAR TOGGLE — JS-injected, always visible
+# ══════════════════════════════════════════════════════════════════════════
+def inject_sidebar_fab():
+    """
+    Inject a permanent floating ☰ button into the PARENT page via JavaScript.
+    Uses window.parent to escape the Streamlit components iframe so the button
+    lives in the main document and stays visible at all times.
+    A MutationObserver re-adds it if React removes it on re-render.
+    """
+    _components.html("""
+    <script>
+    (function() {
+        var doc = window.parent.document;
+        if (!doc) return;
+
+        function addFAB() {
+            if (doc.getElementById('pg-sidebar-fab')) return;
+
+            // Inject keyframe animation once
+            if (!doc.getElementById('pg-fab-style')) {
+                var s = doc.createElement('style');
+                s.id = 'pg-fab-style';
+                s.textContent =
+                    '@keyframes pg-glow{' +
+                    '0%,100%{box-shadow:4px 0 20px rgba(79,110,247,0.4)}' +
+                    '50%{box-shadow:4px 0 38px rgba(79,110,247,0.75),0 0 0 6px rgba(79,110,247,0.12)}' +
+                    '}' +
+                    '#pg-sidebar-fab{' +
+                    'position:fixed!important;top:50%!important;left:0!important;' +
+                    'transform:translateY(-50%)!important;' +
+                    'z-index:2147483647!important;' +
+                    'background:linear-gradient(135deg,rgba(79,110,247,0.3),rgba(124,58,237,0.2))!important;' +
+                    'border:2px solid rgba(79,110,247,0.75)!important;' +
+                    'border-left:none!important;border-radius:0 14px 14px 0!important;' +
+                    'padding:16px 14px!important;color:#7b9cff!important;' +
+                    'font-size:1.5rem!important;line-height:1!important;' +
+                    'cursor:pointer!important;font-family:Arial,sans-serif!important;' +
+                    'outline:none!important;transition:all 0.2s ease!important;' +
+                    'animation:pg-glow 2.5s ease-in-out infinite!important;' +
+                    '}' +
+                    '#pg-sidebar-fab:hover{' +
+                    'background:rgba(79,110,247,0.5)!important;' +
+                    'padding-right:19px!important;' +
+                    '}';
+                doc.head.appendChild(s);
+            }
+
+            var btn = doc.createElement('button');
+            btn.id = 'pg-sidebar-fab';
+            btn.title = 'Open / Close sidebar';
+            btn.innerHTML = '&#9776;';
+
+            btn.onclick = function() {
+                // Try native Streamlit toggle first
+                var t = doc.querySelector('[data-testid="collapsedControl"]');
+                if (t) { t.click(); return; }
+                // Fallback: sidebar's own toggle button
+                var sb = doc.querySelector('[data-testid="stSidebar"] button');
+                if (sb) sb.click();
+            };
+
+            doc.body.appendChild(btn);
+        }
+
+        addFAB();
+
+        // Re-add after every React re-render
+        new MutationObserver(addFAB).observe(doc.body, {childList: true});
+    })();
+    </script>
+    """, height=0)
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ══════════════════════════════════════════════════════════════════════════
@@ -1237,6 +1313,7 @@ if not st.session_state.authenticated:
     show_login_page()
 else:
     show_sidebar()
+    inject_sidebar_fab()          # ☰ floating button — always visible
     if st.session_state.page == "analytics":
         show_analytics()
     elif st.session_state.page == "admin":
