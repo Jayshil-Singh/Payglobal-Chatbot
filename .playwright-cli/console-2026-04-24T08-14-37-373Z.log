@@ -2,3 +2,4 @@
 [ 1635421ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
 [ 1877454ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:8502/_stcore/health:0
 [ 1877455ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:8502/_stcore/host-config:0
+[ 3624125ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
