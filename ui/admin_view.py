@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from pathlib import Path
 
 import streamlit as st
@@ -47,12 +48,13 @@ def render_admin_panel(
         faiss_chunks = 0
         if idx_ok:
             try:
-                import faiss
-
-                idx = faiss.read_index(str(uploads_dir.parent / "faiss_index" / "index.faiss"))
-                faiss_chunks = int(idx.ntotal)
+                manifest_path = uploads_dir.parent / "ingested_manifest.json"
+                if manifest_path.exists():
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    if isinstance(manifest, dict):
+                        faiss_chunks = sum(int(item.get("chunks", 0) or 0) for item in manifest.values() if isinstance(item, dict))
             except Exception:
-                # Keep panel responsive even if FAISS metadata read fails.
+                # Keep panel responsive even if manifest parsing fails.
                 faiss_chunks = 0
         sc4.metric("Indexed Chunks", faiss_chunks)
 

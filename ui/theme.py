@@ -7,7 +7,8 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
 [data-testid="stAppDeployButton"]{display:none!important}
 .viewerBadge_container__r5tak,.viewerBadge_link__qRIco{display:none!important}
 header[data-testid="stHeader"]{background:transparent!important}
-[data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stStatusWidget"]{visibility:hidden!important}
+/* Keep toolbar visible so sidebar collapsed control always works */
+[data-testid="stDecoration"],[data-testid="stStatusWidget"]{visibility:hidden!important}
 .block-container{padding:0.8rem 1.5rem 0 1.5rem!important;max-width:100%!important}
 .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .status-dot.green{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7)}
@@ -77,6 +78,7 @@ CSS_DARK = """
 
 CSS_LIGHT = """
 .stApp{background:#f0f2f8!important;color:#1a1f36!important}
+[data-testid="stToolbar"]{background:transparent!important}
 [data-testid="stBottom"],[data-testid="stChatInputContainer"],section[data-testid="stBottom"]>div{
     background:#f0f2f8!important;border-top:1px solid rgba(200,210,230,0.7)!important}
 [data-testid="stChatInput"]{
@@ -91,6 +93,17 @@ CSS_LIGHT = """
     border-radius:14px!important;padding:0.85rem 1.1rem!important;margin-bottom:0.5rem!important;
     box-shadow:0 2px 8px rgba(79,110,247,0.06)!important}
 [data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.3)!important}
+[data-testid="stSidebar"] *{color:#1a1f36!important}
+[data-testid="stSidebar"] .stButton>button[kind="secondary"]{
+    background:#ffffff!important;border:1px solid rgba(180,193,218,0.85)!important;color:#1a1f36!important
+}
+[data-testid="stSidebar"] .stButton>button[kind="primary"]{
+    color:#ffffff!important
+}
+[data-testid="stSidebar"] .stTextInput input,
+[data-testid="stSidebar"] [data-baseweb="select"]{
+    background:#ffffff!important;border-color:rgba(180,193,218,0.9)!important;color:#1a1f36!important
+}
 [data-testid="stSidebar"]{
     background:linear-gradient(180deg,#ffffff,#f8f9fc)!important;
     border-right:1px solid rgba(200,210,230,0.7)!important}

@@ -118,82 +118,15 @@ def show_admin_panel() -> None:
     )
 
 
-def render_main_nav_rail() -> None:
-    """Persistent left-side nav for admin users (not top tabs)."""
-    user = st.session_state.get("user")
-    if not user or user.get("role") != "admin":
-        return
-
-    st.markdown(
-        """
-        <style>
-        .pg-nav-rail {
-            border: 1px solid rgba(79,110,247,0.28);
-            border-radius: 12px;
-            padding: .7rem;
-            background: rgba(10,15,28,0.45);
-            position: sticky;
-            top: 0.75rem;
-        }
-        .pg-nav-title {
-            font-size: .72rem;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            color: #7b9cff;
-            margin-bottom: .35rem;
-            font-weight: 700;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("<div class='pg-nav-rail'>", unsafe_allow_html=True)
-    st.markdown("<div class='pg-nav-title'>Navigation</div>", unsafe_allow_html=True)
-    if st.button(
-        "💬 Chat",
-        key="rail_nav_chat",
-        width="stretch",
-        type="primary" if st.session_state.page == "chat" else "secondary",
-    ):
-        st.session_state.page = "chat"
-        st.rerun()
-    if st.button(
-        "📊 Stats",
-        key="rail_nav_analytics",
-        width="stretch",
-        type="primary" if st.session_state.page == "analytics" else "secondary",
-    ):
-        st.session_state.page = "analytics"
-        st.rerun()
-    if st.button(
-        "⚙️ Admin",
-        key="rail_nav_admin",
-        width="stretch",
-        type="primary" if st.session_state.page == "admin" else "secondary",
-    ):
-        st.session_state.page = "admin"
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
 if not st.session_state.authenticated:
     show_login_page()
 else:
     try:
         show_sidebar()
-        user = st.session_state.get("user")
-        if user and user.get("role") == "admin":
-            nav_col, content_col = st.columns([1.2, 6], vertical_alignment="top")
-            with nav_col:
-                render_main_nav_rail()
-            with content_col:
-                if st.session_state.page == "analytics":
-                    show_analytics()
-                elif st.session_state.page == "admin":
-                    show_admin_panel()
-                else:
-                    show_chat()
+        if st.session_state.page == "analytics":
+            show_analytics()
+        elif st.session_state.page == "admin":
+            show_admin_panel()
         else:
             show_chat()
     except Exception as exc:
