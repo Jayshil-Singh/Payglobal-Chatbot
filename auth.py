@@ -19,8 +19,11 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def bootstrap_admin():
-    """Create the default admin account if it doesn't exist yet."""
+    """Create bootstrap admin account if configured and not present."""
     init_db()
+    if not DEFAULT_ADMIN_PASS:
+        log.info("Admin bootstrap skipped (ADMIN_BOOTSTRAP_PASSWORD is empty).")
+        return
     existing = get_user(DEFAULT_ADMIN_USER)
     if not existing:
         create_user(

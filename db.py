@@ -5,7 +5,7 @@ Tables: users, conversations, messages, feedback
 import sqlite3
 import json
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from config import DB_PATH
 from utils.logger import get_logger
@@ -73,10 +73,56 @@ def init_db():
                 rating     INTEGER NOT NULL,  -- 1 = thumbs up, -1 = thumbs down
                 comment    TEXT,
                 timestamp  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+                FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+                UNIQUE (message_id, user_id)
             );
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                token      TEXT PRIMARY KEY,
+                user_id    INTEGER NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            DELETE FROM feedback
+            WHERE id NOT IN (
+                SELECT MAX(id)
+                FROM feedback
+                GROUP BY message_id, user_id
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_message_user
+            ON feedback (message_id, user_id);
         """)
     log.info("Database initialized.")
+
+
+# ── Sessions (persistent login) ────────────────────────────────────────────
+
+def create_session(user_id: int, token: str, hours: int = 72) -> None:
+    expires = (datetime.now(timezone.utc) + timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+            (token, user_id, expires),
+        )
+
+
+def get_session_user(token: str) -> Optional[Dict]:
+    """Return the user dict if the session token is valid & not expired, else None."""
+    with get_conn() as conn:
+        row = conn.execute(
+            """SELECT u.id, u.username, u.email, u.role
+               FROM sessions s JOIN users u ON s.user_id = u.id
+               WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP""",
+            (token,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_session(token: str) -> None:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
 
 
 # ── Users ──────────────────────────────────────────────────────────────────
@@ -100,7 +146,7 @@ def update_last_login(user_id: int):
     with get_conn() as conn:
         conn.execute(
             "UPDATE users SET last_login = ? WHERE id = ?",
-            (datetime.utcnow().isoformat(), user_id),
+            (datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), user_id),
         )
 
 
@@ -142,7 +188,7 @@ def update_conversation_title(conv_id: int, title: str):
     with get_conn() as conn:
         conn.execute(
             "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
-            (title[:60], datetime.utcnow().isoformat(), conv_id),
+            (title[:60], datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), conv_id),
         )
 
 
@@ -165,7 +211,7 @@ def save_message(conv_id: int, role: str, content: str, sources=None) -> int:
     with get_conn() as conn:
         conn.execute(
             "UPDATE conversations SET updated_at = ? WHERE id = ?",
-            (datetime.utcnow().isoformat(), conv_id),
+            (datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), conv_id),
         )
     return msg_id
 
@@ -194,7 +240,11 @@ def save_feedback(message_id: int, user_id: int, rating: int, comment: str = "")
             """
             INSERT INTO feedback (message_id, user_id, rating, comment)
             VALUES (?, ?, ?, ?)
-            ON CONFLICT DO NOTHING
+            ON CONFLICT(message_id, user_id)
+            DO UPDATE SET
+                rating = excluded.rating,
+                comment = excluded.comment,
+                timestamp = CURRENT_TIMESTAMP
             """,
             (message_id, user_id, rating, comment),
         )
@@ -219,7 +269,7 @@ def get_feedback_stats() -> Dict:
 
 def get_request_count_last_hour(user_id: int) -> int:
     """Count how many user messages this user sent in the last 60 minutes."""
-    since = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         row = conn.execute(
             """

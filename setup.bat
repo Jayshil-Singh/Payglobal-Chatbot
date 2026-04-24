@@ -24,10 +24,10 @@ if errorlevel 1 (
 REM Create .env from example
 if not exist ".env" (
     copy ".env.example" ".env"
-    echo [INFO] .env file created. Please edit it and add your OPENAI_API_KEY.
+    echo [INFO] .env file created. Please edit it and add your GROK_API_KEY.
     echo.
     echo  IMPORTANT: Open .env with Notepad and set your API key:
-    echo  OPENAI_API_KEY=sk-your-key-here
+    echo  GROK_API_KEY=gsk_your_key_here
     echo.
     notepad .env
 )

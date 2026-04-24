@@ -2,10 +2,8 @@
 PayGlobal AI Assistant — Streamlit Application
 """
 import streamlit as st
-import json
-from pathlib import Path
 from datetime import datetime
-import streamlit.components.v1 as _components
+from html import escape
 
 # ── Page config MUST be first ──────────────────────────────────────────────
 st.set_page_config(
@@ -33,224 +31,193 @@ from utils.exporter import export_to_pdf, export_to_docx, export_answer_pdf
 bootstrap_admin()
 
 # ══════════════════════════════════════════════════════════════════════════
-# CUSTOM CSS — dark premium theme
+# THEME CSS — dark / light switching
 # ══════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<style>
+_CSS_COMMON = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
-.stApp{background:#070b14!important;color:#e6edf3}
 #MainMenu,footer{visibility:hidden}
-header[data-testid="stHeader"]{background:rgba(7,11,20,0.0)!important}
+[data-testid="stAppDeployButton"]{display:none!important}
+.viewerBadge_container__r5tak,.viewerBadge_link__qRIco{display:none!important}
+header[data-testid="stHeader"]{background:transparent!important}
 [data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stStatusWidget"]{visibility:hidden!important}
 .block-container{padding:0.8rem 1.5rem 0 1.5rem!important;max-width:100%!important}
-
-/* ── Sidebar toggle — pulsing blue pill so it's impossible to miss ── */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.status-dot.green{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.7)}
+.status-dot.red{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.7)}
+.status-dot.amber{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.7)}
+.badge{display:inline-block;padding:.1rem .48rem;border-radius:999px;font-size:.67rem;font-weight:600}
+.badge-blue{background:rgba(79,110,247,.18);color:#4f6ef7}
+.badge-green{background:rgba(16,185,129,.18);color:#10b981}
+.badge-red{background:rgba(239,68,68,.18);color:#ef4444}
 [data-testid="collapsedControl"]{
     display:flex!important;visibility:visible!important;opacity:1!important;
-    background:linear-gradient(135deg,rgba(79,110,247,0.22),rgba(124,58,237,0.15))!important;
-    border:2px solid rgba(79,110,247,0.65)!important;
+    background:rgba(79,110,247,0.12)!important;
+    border:1px solid rgba(79,110,247,0.35)!important;
     border-left:none!important;border-radius:0 12px 12px 0!important;
-    padding:14px 10px!important;
-    box-shadow:4px 0 24px rgba(79,110,247,0.4)!important;
-    z-index:999999!important;
-    animation:sb-pulse 2.5s ease-in-out infinite!important
-}
-@keyframes sb-pulse{
-    0%,100%{box-shadow:4px 0 20px rgba(79,110,247,0.3)}
-    50%  {box-shadow:4px 0 30px rgba(79,110,247,0.6),0 0 0 4px rgba(79,110,247,0.1)}
-}
-[data-testid="collapsedControl"] svg{fill:#7b9cff!important;width:20px!important;height:20px!important}
-[data-testid="collapsedControl"]:hover{
-    background:rgba(79,110,247,0.35)!important;
-    box-shadow:4px 0 32px rgba(79,110,247,0.6)!important
-}
-
-/* ── FIX THE WHITE BOTTOM INPUT BAR ── */
-[data-testid="stBottom"],[data-testid="stChatInputContainer"],
-.stChatInputContainer,section[data-testid="stBottom"]>div{
-    background:#070b14!important;
-    border-top:1px solid rgba(48,54,61,0.4)!important
-}
-
-/* ── Chat input ── */
-[data-testid="stChatInput"]{
-    background:#111827!important;
-    border:1.5px solid rgba(79,110,247,0.25)!important;
-    border-radius:14px!important;
-    box-shadow:0 2px 16px rgba(0,0,0,0.5)!important;
-    transition:border-color .2s,box-shadow .2s!important
-}
-[data-testid="stChatInput"]:focus-within{
-    border-color:rgba(79,110,247,0.65)!important;
-    box-shadow:0 0 0 3px rgba(79,110,247,0.12),0 2px 16px rgba(0,0,0,0.5)!important
-}
-[data-testid="stChatInput"] textarea{
-    background:transparent!important;color:#e6edf3!important;
-    font-family:'Inter',sans-serif!important;font-size:0.92rem!important;
-    caret-color:#4f6ef7!important
-}
-[data-testid="stChatInput"] textarea::placeholder{color:#3d4a5c!important}
-[data-testid="stChatInput"] button{
-    background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;
-    border-radius:10px!important;border:none!important;color:white!important
-}
-
-/* ── Chat messages ── */
-[data-testid="stChatMessage"]{
-    background:#0b1120!important;
-    border:1px solid rgba(48,54,61,0.5)!important;
-    border-radius:14px!important;
-    padding:0.85rem 1.1rem!important;
-    margin-bottom:0.5rem!important;
-    transition:border-color .18s!important
-}
-[data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.2)!important}
-
-/* ── Hide ugly default avatars ── */
-[data-testid="chatAvatarIcon-user"],[data-testid="chatAvatarIcon-assistant"]{display:none!important}
-
-/* ── Tiny feedback / PDF buttons inside messages ── */
-[data-testid="stChatMessage"] .stButton>button{
-    padding:0.05rem 0.4rem!important;font-size:0.73rem!important;
-    min-height:0!important;height:1.4rem!important;line-height:1.4!important;
-    border-radius:6px!important;background:rgba(22,32,50,0.9)!important;
-    border:1px solid rgba(48,54,61,0.65)!important;color:#6b7a99!important;width:auto!important
-}
-[data-testid="stChatMessage"] .stButton>button:hover{
-    background:rgba(79,110,247,0.15)!important;color:#c9d1d9!important;
-    border-color:rgba(79,110,247,0.4)!important
-}
-[data-testid="stChatMessage"] [data-testid="stDownloadButton"] button{
-    padding:0.05rem 0.4rem!important;font-size:0.73rem!important;height:1.4rem!important;
-    background:rgba(79,110,247,0.1)!important;border:1px solid rgba(79,110,247,0.3)!important;
-    color:#7b9cff!important;border-radius:6px!important;width:auto!important
-}
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"]{
-    background:linear-gradient(180deg,#0a0f1c,#070b14)!important;
-    border-right:1px solid rgba(48,54,61,0.4)!important
-}
-[data-testid="stSidebar"] .stMarkdown h3{
-    color:#4f6ef7;font-size:0.67rem;font-weight:700;
-    letter-spacing:.1em;text-transform:uppercase;margin:1rem 0 0.35rem
-}
-[data-testid="stSidebar"] .stButton>button{
-    width:100%;background:transparent;color:#6b7a99;
-    border:1px solid rgba(48,54,61,0.45);border-radius:8px;
-    font-size:0.8rem;padding:0.36rem 0.7rem;text-align:left;
-    transition:all .18s;margin-bottom:2px
-}
-[data-testid="stSidebar"] .stButton>button:hover{
-    background:rgba(79,110,247,0.1);color:#e6edf3;border-color:rgba(79,110,247,0.35)
-}
-
-/* ── Selectbox ── */
-[data-testid="stSelectbox"]>div>div,[data-testid="stSidebar"] .stSelectbox>div>div{
-    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;
-    color:#e6edf3!important;border-radius:8px!important
-}
-
-/* ── Text inputs ── */
-.stTextInput>div>div>input{
-    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;
-    color:#e6edf3!important;border-radius:8px!important
-}
-.stTextInput>div>div>input:focus{
-    border-color:rgba(79,110,247,0.5)!important;
-    box-shadow:0 0 0 2px rgba(79,110,247,0.1)!important
-}
-
-/* ── Primary button ── */
+    padding:10px 8px!important;box-shadow:none!important;
+    z-index:999999!important}
+[data-testid="collapsedControl"] svg{fill:#7b9cff!important}
+[data-testid="collapsedControl"]:hover{background:rgba(79,110,247,0.2)!important}
 .stButton>button[kind="primary"]{
     background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;
     color:white!important;border:none!important;border-radius:10px!important;
-    font-weight:600!important;padding:0.5rem 1.4rem!important;transition:all .22s!important
-}
+    font-weight:600!important;transition:all .22s!important}
 .stButton>button[kind="primary"]:hover{
-    transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(79,110,247,0.35)!important
-}
-
-/* ── Expander ── */
-[data-testid="stExpander"] summary,.streamlit-expanderHeader{
-    background:#111827!important;border-radius:8px!important;
-    color:#8b949e!important;font-size:0.79rem!important
-}
-[data-testid="stExpander"]{border:1px solid rgba(48,54,61,0.45)!important;border-radius:8px!important}
-
-/* ── Alerts ── */
+    transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(79,110,247,0.35)!important}
+.stat-chip{display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:.45rem .3rem;flex:1}
+.stat-chip .val{font-size:1.1rem;font-weight:700;color:#4f6ef7}
+.stat-chip .lbl{font-size:.6rem;margin-top:.1rem;text-align:center}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.35rem 0 .75rem;margin-bottom:.75rem}
+.topbar-title{font-size:.98rem;font-weight:700}
+.topbar-user{font-size:.76rem}
+.msg-label-user{font-size:.68rem;font-weight:700;color:#7b9cff;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+.msg-label-ai{font-size:.68rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
+[data-testid="chatAvatarIcon-user"],[data-testid="chatAvatarIcon-assistant"]{display:none!important}
 .stAlert{border-radius:10px!important}
-
-/* ── File uploader ── */
-[data-testid="stFileUploader"]{
-    background:#111827;border:2px dashed rgba(79,110,247,0.22);border-radius:10px;padding:.4rem
-}
-
-/* ── Logo card ── */
-.logo-card{
-    background:linear-gradient(135deg,rgba(79,110,247,0.1),rgba(124,58,237,0.07));
-    border:1px solid rgba(79,110,247,0.18);border-radius:12px;
-    padding:.9rem;text-align:center;margin-bottom:.7rem
-}
-.logo-card h2{color:#e6edf3;margin:0;font-size:.92rem;font-weight:700}
-.logo-card p{color:#6b7a99;margin:.12rem 0 0;font-size:.7rem}
-
-/* ── Badge ── */
-.badge{display:inline-block;padding:.1rem .48rem;border-radius:999px;font-size:.67rem;font-weight:600}
-.badge-blue {background:rgba(79,110,247,.18);color:#7b9cff}
-.badge-green{background:rgba(16,185,129,.18);color:#34d399}
-.badge-red  {background:rgba(239,68,68,.18); color:#f87171}
-
-/* ── Topbar ── */
-.topbar{display:flex;align-items:center;justify-content:space-between;
-    padding:.35rem 0 .75rem;border-bottom:1px solid rgba(48,54,61,0.45);margin-bottom:.75rem}
-.topbar-title{font-size:.98rem;font-weight:700;color:#e6edf3}
-.topbar-user{font-size:.76rem;color:#6b7a99}
-
-/* ── Role labels in chat ── */
-.msg-label-user{font-size:.68rem;font-weight:700;color:#7b9cff;
-    text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
-.msg-label-ai{font-size:.68rem;font-weight:700;color:#34d399;
-    text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem}
-
-/* ── Dataframe ── */
 [data-testid="stDataFrame"]{border-radius:10px;overflow:hidden}
+.logo-card{border-radius:12px;padding:.9rem;text-align:center;margin-bottom:.7rem}
+.logo-card h2{margin:0;font-size:.92rem;font-weight:700}
+.logo-card p{margin:.12rem 0 0;font-size:.7rem}
+.stTabs [data-baseweb="tab-list"]{border-radius:10px!important;gap:2px!important}
+.stTabs [data-baseweb="tab"]{border-radius:8px!important;font-size:0.82rem!important;font-weight:500!important}
 
-/* ── Sidebar collapse/expand toggle — ALWAYS visible ── */
-[data-testid="collapsedControl"]{
-    display:flex!important;visibility:visible!important;opacity:1!important;
-    background:rgba(10,15,28,0.98)!important;
+/* ── Sidebar section label ── */
+.sb-section-label{
+    font-size:.58rem;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:#4f6ef7;
+    margin:.7rem 0 .2rem;opacity:.85
+}
+
+/* ── Sidebar compact header ── */
+.sb-header{
+    display:flex;align-items:center;
+    padding:.4rem 0 .5rem;
+    border-bottom:1px solid rgba(48,54,61,0.35);
+    margin-bottom:.5rem
+}
+.sb-header .sb-logo{font-size:.92rem;font-weight:700;margin-left:.4rem}
+.sb-header .sb-sub{font-size:.63rem;color:#6b7a99;margin-left:.4rem}
+
+/* ── Prompt chip buttons \u2014 auto-width, pill-shaped ── */
+div[data-testid="stColumns"] div[data-testid="stButton"] button[kind="secondary"][id^="ex_"],
+div[data-testid="stColumns"] div[data-testid="stButton"] button:has(+ *[id^="ex_"]) {
+    width:auto!important;white-space:nowrap!important;
+    padding:.4rem .85rem!important;
+    border-radius:999px!important;
     border:1px solid rgba(79,110,247,0.4)!important;
-    border-left:none!important;
-    border-radius:0 10px 10px 0!important;
-    box-shadow:4px 0 20px rgba(0,0,0,0.6)!important;
-    z-index:999999!important
+    background:rgba(79,110,247,0.07)!important;
+    color:#9ab0ff!important;
+    font-size:.8rem!important;
+    transition:all .18s!important;
 }
-[data-testid="collapsedControl"] svg{fill:#4f6ef7!important}
-[data-testid="collapsedControl"]:hover{
-    background:rgba(79,110,247,0.18)!important;
-    box-shadow:4px 0 24px rgba(79,110,247,0.25)!important
+/* Target by key prefix \u2014 Streamlit generates id from key */
+[data-testid="stButton"] button[kind="secondary"]:not([data-testid]) {
+    width:fit-content!important;
 }
+"""
 
-/* ── Admin panel tabs ── */
-.stTabs [data-baseweb="tab-list"]{
-    background:#0d1117!important;
-    border-radius:10px!important;
-    border:1px solid rgba(48,54,61,0.5)!important;
-    gap:2px!important
-}
-.stTabs [data-baseweb="tab"]{
-    background:transparent!important;color:#6b7a99!important;
-    border-radius:8px!important;font-size:0.82rem!important;font-weight:500!important
-}
-.stTabs [aria-selected="true"]{
-    background:rgba(79,110,247,0.15)!important;color:#7b9cff!important
-}
-</style>
-""", unsafe_allow_html=True)
+_CSS_DARK = """
+.stApp{background:#070b14!important;color:#e6edf3!important}
+[data-testid="stBottom"],[data-testid="stChatInputContainer"],section[data-testid="stBottom"]>div{
+    background:#070b14!important;border-top:1px solid rgba(48,54,61,0.4)!important}
+[data-testid="stChatInput"]{
+    background:#111827!important;border:1.5px solid rgba(79,110,247,0.25)!important;
+    border-radius:14px!important;box-shadow:0 2px 16px rgba(0,0,0,0.5)!important}
+[data-testid="stChatInput"]:focus-within{border-color:rgba(79,110,247,0.65)!important}
+[data-testid="stChatInput"] textarea{background:transparent!important;color:#e6edf3!important;caret-color:#4f6ef7!important}
+[data-testid="stChatInput"] textarea::placeholder{color:#3d4a5c!important}
+[data-testid="stChatInput"] button{background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;border-radius:10px!important;color:white!important}
+[data-testid="stChatMessage"]{
+    background:#0b1120!important;border:1px solid rgba(48,54,61,0.5)!important;
+    border-radius:14px!important;padding:0.85rem 1.1rem!important;margin-bottom:0.5rem!important}
+[data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.2)!important}
+[data-testid="stChatMessage"] .stButton>button{
+    background:rgba(22,32,50,0.9)!important;border:1px solid rgba(48,54,61,0.65)!important;color:#6b7a99!important}
+[data-testid="stChatMessage"] .stButton>button:hover{
+    background:rgba(79,110,247,0.15)!important;color:#c9d1d9!important}
+[data-testid="stSidebar"]{
+    background:linear-gradient(180deg,#0a0f1c,#070b14)!important;
+    border-right:1px solid rgba(48,54,61,0.4)!important}
+[data-testid="stSidebar"] .stMarkdown h3{
+    color:#4f6ef7;font-size:0.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:1rem 0 0.35rem}
+[data-testid="stSidebar"] .stButton>button{
+    background:transparent;color:#6b7a99;border:1px solid rgba(48,54,61,0.45);
+    border-radius:8px;font-size:0.8rem;transition:all .18s;margin-bottom:2px}
+[data-testid="stSidebar"] .stButton>button:hover{
+    background:rgba(79,110,247,0.1);color:#e6edf3;border-color:rgba(79,110,247,0.35)}
+[data-testid="stSelectbox"]>div>div{
+    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;color:#e6edf3!important;border-radius:8px!important}
+.stTextInput>div>div>input{
+    background:#111827!important;border:1px solid rgba(48,54,61,0.65)!important;color:#e6edf3!important;border-radius:8px!important}
+.stTextInput>div>div>input:focus{border-color:rgba(79,110,247,0.5)!important}
+[data-testid="stExpander"] summary{background:#111827!important;border-radius:8px!important;color:#8b949e!important}
+[data-testid="stExpander"]{border:1px solid rgba(48,54,61,0.45)!important;border-radius:8px!important}
+[data-testid="stFileUploader"]{background:#111827;border:2px dashed rgba(79,110,247,0.22);border-radius:10px;padding:.4rem}
+.logo-card{background:linear-gradient(135deg,rgba(79,110,247,0.1),rgba(124,58,237,0.07));border:1px solid rgba(79,110,247,0.18)}
+.logo-card h2{color:#e6edf3}.logo-card p{color:#6b7a99}
+.stat-chip{background:#0d1117;border:1px solid rgba(48,54,61,0.6)}.stat-chip .lbl{color:#6b7a99}
+.topbar{border-bottom:1px solid rgba(48,54,61,0.45)}
+.topbar-title{color:#e6edf3}.topbar-user{color:#6b7a99}
+.stTabs [data-baseweb="tab-list"]{background:#0d1117!important;border:1px solid rgba(48,54,61,0.5)!important}
+.stTabs [data-baseweb="tab"]{background:transparent!important;color:#6b7a99!important}
+.stTabs [aria-selected="true"]{background:rgba(79,110,247,0.15)!important;color:#7b9cff!important}
+"""
 
+_CSS_LIGHT = """
+.stApp{background:#f0f2f8!important;color:#1a1f36!important}
+[data-testid="stBottom"],[data-testid="stChatInputContainer"],section[data-testid="stBottom"]>div{
+    background:#f0f2f8!important;border-top:1px solid rgba(200,210,230,0.7)!important}
+[data-testid="stChatInput"]{
+    background:#ffffff!important;border:1.5px solid rgba(79,110,247,0.3)!important;
+    border-radius:14px!important;box-shadow:0 2px 12px rgba(79,110,247,0.08)!important}
+[data-testid="stChatInput"]:focus-within{border-color:rgba(79,110,247,0.7)!important}
+[data-testid="stChatInput"] textarea{background:transparent!important;color:#1a1f36!important;caret-color:#4f6ef7!important}
+[data-testid="stChatInput"] textarea::placeholder{color:#9ba3c0!important}
+[data-testid="stChatInput"] button{background:linear-gradient(135deg,#4f6ef7,#7c3aed)!important;border-radius:10px!important;color:white!important}
+[data-testid="stChatMessage"]{
+    background:#ffffff!important;border:1px solid rgba(200,210,230,0.8)!important;
+    border-radius:14px!important;padding:0.85rem 1.1rem!important;margin-bottom:0.5rem!important;
+    box-shadow:0 2px 8px rgba(79,110,247,0.06)!important}
+[data-testid="stChatMessage"]:hover{border-color:rgba(79,110,247,0.3)!important}
+[data-testid="stChatMessage"] .stButton>button{
+    background:rgba(240,242,248,0.9)!important;border:1px solid rgba(200,210,230,0.8)!important;color:#6b7a99!important}
+[data-testid="stChatMessage"] .stButton>button:hover{
+    background:rgba(79,110,247,0.1)!important;color:#4f6ef7!important}
+[data-testid="stSidebar"]{
+    background:linear-gradient(180deg,#ffffff,#f8f9fc)!important;
+    border-right:1px solid rgba(200,210,230,0.7)!important}
+[data-testid="stSidebar"] .stMarkdown h3{
+    color:#4f6ef7;font-size:0.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:1rem 0 0.35rem}
+[data-testid="stSidebar"] .stButton>button{
+    background:transparent;color:#4a5568;border:1px solid rgba(200,210,230,0.7);
+    border-radius:8px;font-size:0.8rem;transition:all .18s;margin-bottom:2px}
+[data-testid="stSidebar"] .stButton>button:hover{
+    background:rgba(79,110,247,0.08);color:#1a1f36;border-color:rgba(79,110,247,0.35)}
+[data-testid="stSelectbox"]>div>div{
+    background:#ffffff!important;border:1px solid rgba(200,210,230,0.8)!important;color:#1a1f36!important;border-radius:8px!important}
+.stTextInput>div>div>input{
+    background:#ffffff!important;border:1px solid rgba(200,210,230,0.8)!important;color:#1a1f36!important;border-radius:8px!important}
+.stTextInput>div>div>input:focus{border-color:rgba(79,110,247,0.5)!important}
+[data-testid="stExpander"] summary{background:#ffffff!important;border-radius:8px!important;color:#4a5568!important}
+[data-testid="stExpander"]{border:1px solid rgba(200,210,230,0.7)!important;border-radius:8px!important}
+[data-testid="stFileUploader"]{background:#ffffff;border:2px dashed rgba(79,110,247,0.3);border-radius:10px;padding:.4rem}
+.logo-card{background:linear-gradient(135deg,rgba(79,110,247,0.07),rgba(124,58,237,0.04));border:1px solid rgba(79,110,247,0.2)}
+.logo-card h2{color:#1a1f36}.logo-card p{color:#6b7a99}
+.stat-chip{background:#ffffff;border:1px solid rgba(200,210,230,0.7)}.stat-chip .lbl{color:#9ba3c0}
+.topbar{border-bottom:1px solid rgba(200,210,230,0.7)}
+.topbar-title{color:#1a1f36}.topbar-user{color:#6b7a99}
+.stTabs [data-baseweb="tab-list"]{background:#ffffff!important;border:1px solid rgba(200,210,230,0.7)!important}
+.stTabs [data-baseweb="tab"]{background:transparent!important;color:#6b7a99!important}
+.stTabs [aria-selected="true"]{background:rgba(79,110,247,0.1)!important;color:#4f6ef7!important}
+"""
+
+
+def apply_theme():
+    """Inject theme CSS based on st.session_state.theme ('dark' | 'light')."""
+    t = st.session_state.get("theme", "dark")
+    css = _CSS_DARK if t == "dark" else _CSS_LIGHT
+    st.markdown(f"<style>{_CSS_COMMON}{css}</style>", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -261,19 +228,21 @@ def init_state():
         "authenticated":  False,
         "user":           None,
         "conv_id":        None,
-        "messages":       [],   # [{role, content, sources}]
+        "messages":       [],
         "rag_chain":      None,
         "module":         "All Modules",
-        "show_login":     True,  # False = show register
+        "show_login":     True,
         "api_key":        GROK_API_KEY,
-        "page":           "chat",   # "chat" | "analytics" | "admin"
-        "admin_view_all": False,    # admin: toggle to see all users' convs
+        "page":           "chat",
+        "admin_view_all": False,
+        "theme":          "dark",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 init_state()
+apply_theme()
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -338,17 +307,17 @@ def show_login_page():
     with col:
         st.markdown("""
         <div style='text-align:center; margin-top:3rem; margin-bottom:2rem;'>
-            <div style='font-size:3.5rem;'>🌐</div>
+            <div style='font-size:2.2rem;font-weight:700;color:#4f6ef7;'>PG</div>
             <h1 style='color:#e6edf3; font-size:1.9rem; font-weight:700; margin:0.3rem 0;'>
                 PayGlobal AI Assistant
             </h1>
             <p style='color:#8b949e; font-size:0.9rem;'>
-                Your intelligent PayGlobal implementation expert
+                Enterprise support copilot for implementation teams
             </p>
         </div>
         """, unsafe_allow_html=True)
 
-        tab_login, tab_register = st.tabs(["🔐 Sign In", "✏️ Register"])
+        tab_login, tab_register = st.tabs(["Sign In", "Register"])
 
         # ── Login tab ──
         with tab_login:
@@ -363,20 +332,12 @@ def show_login_page():
                 else:
                     user = login(username, password)
                     if user:
-                        st.session_state.authenticated = True
-                        st.session_state.user = user
-                        st.session_state.api_key = GROK_API_KEY
-                        st.success(f"Welcome back, {user['username']}! 👋")
+                        st.session_state.authenticated  = True
+                        st.session_state.user           = user
+                        st.session_state.api_key        = GROK_API_KEY
                         st.rerun()
                     else:
                         st.error("Invalid username or password.")
-
-            st.markdown("""
-            <div style='background:rgba(79,110,247,0.08); border:1px solid rgba(79,110,247,0.2);
-                         border-radius:8px; padding:0.7rem 1rem; margin-top:1rem; font-size:0.8rem; color:#8b949e;'>
-                🔑 Default credentials: <code style='color:#4f6ef7;'>admin</code> / <code style='color:#4f6ef7;'>PayGlobal@2024</code>
-            </div>
-            """, unsafe_allow_html=True)
 
         # ── Register tab ──
         with tab_register:
@@ -406,99 +367,161 @@ def show_login_page():
 # ══════════════════════════════════════════════════════════════════════════
 def show_sidebar():
     with st.sidebar:
-        # Logo
-        st.markdown("""
-        <div class='logo-card'>
-            <div style='font-size:2rem;'>🌐</div>
-            <h2>PayGlobal AI</h2>
-            <p>Implementation Expert</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        user = st.session_state.user
+        user     = st.session_state.user
         is_admin = user["role"] == "admin"
+        is_dark  = st.session_state.get("theme", "dark") == "dark"
 
-        st.markdown(f"""
-        <div style='text-align:center; margin-bottom:0.8rem;'>
-            <span style='font-size:0.8rem; color:#8b949e;'>
-                👤 {user['username']}
-                <span class='badge badge-{"blue" if is_admin else "green"}'>{user['role']}</span>
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+        # ── Compact header ─────────────────────────────────────────────────
+        hc1, hc2 = st.columns([5, 1])
+        with hc1:
+            st.markdown(
+                f"<div style='display:flex;align-items:center;padding:.3rem 0;'>"
+                f"<span style='font-size:1rem;font-weight:700;color:#4f6ef7;'>PG</span>"
+                f"<div style='margin-left:.5rem;'>"
+                f"<div style='font-size:.85rem;font-weight:700;'>PayGlobal AI</div>"
+                f"<div style='font-size:.6rem;color:#6b7a99;'>Enterprise Assistant</div>"
+                f"</div></div>",
+                unsafe_allow_html=True
+            )
+        with hc2:
+            if st.button("☀️" if is_dark else "🌙", key="theme_toggle",
+                         help="Toggle light/dark mode"):
+                st.session_state.theme = "light" if is_dark else "dark"
+                st.rerun()
 
-        # ── Admin nav buttons ──────────────────────────────────────────────────────
+        # ── User chip ──────────────────────────────────────────────────────
+        badge_color = "#4f6ef7" if is_admin else "#10b981"
+        safe_username = escape(user["username"])
+        safe_role = escape(user["role"])
+        st.markdown(
+            f"<div style='display:flex;align-items:center;gap:.4rem;"
+            f"padding:.3rem 0 .5rem;border-bottom:1px solid rgba(48,54,61,0.3);margin-bottom:.4rem;'>"
+            f"<span style='font-size:.72rem;color:#8b949e;'>👤 {safe_username}</span>"
+            f"<span style='font-size:.6rem;font-weight:600;padding:.08rem .35rem;"
+            f"border-radius:999px;background:rgba(79,110,247,.15);color:{badge_color};'>"
+            f"{safe_role}</span></div>",
+            unsafe_allow_html=True
+        )
+
+        # ── Admin nav (icon buttons) ────────────────────────────────────────
         if is_admin:
-            a1, a2, a3 = st.columns(3)
-            with a1:
-                btn_type = "primary" if st.session_state.page == "chat" else "secondary"
-                if st.button("💬 Chat", use_container_width=True, key="nav_chat", type=btn_type):
+            pg = st.session_state.page
+            n1, n2, n3 = st.columns(3)
+            with n1:
+                if st.button("💬 Chat", key="nav_chat", use_container_width=True,
+                             type="primary" if pg == "chat" else "secondary"):
                     st.session_state.page = "chat"; st.rerun()
-            with a2:
-                btn_type = "primary" if st.session_state.page == "analytics" else "secondary"
-                if st.button("📊 Stats", use_container_width=True, key="nav_analytics", type=btn_type):
+            with n2:
+                if st.button("📊 Stats", key="nav_analytics", use_container_width=True,
+                             type="primary" if pg == "analytics" else "secondary"):
                     st.session_state.page = "analytics"; st.rerun()
-            with a3:
-                btn_type = "primary" if st.session_state.page == "admin" else "secondary"
-                if st.button("⚙️ Admin", use_container_width=True, key="nav_admin", type=btn_type):
+            with n3:
+                if st.button("⚙️ Admin", key="nav_admin", use_container_width=True,
+                             type="primary" if pg == "admin" else "secondary"):
                     st.session_state.page = "admin"; st.rerun()
+            st.markdown("<div style='height:.15rem'></div>", unsafe_allow_html=True)
 
-        # New Chat
-        if st.button("➕  New Chat", use_container_width=True):
-            start_new_conversation()
-            st.rerun()
+        if st.button("＋  New Chat", key="new_chat_btn", use_container_width=True):
+            start_new_conversation(); st.rerun()
 
-        st.divider()
-
-        # Module selector
-        st.markdown("### 📦 Module Filter")
+        # ── Module ──────────────────────────────────────────────────────────
+        st.markdown("<div class='sb-section-label'>Module</div>", unsafe_allow_html=True)
         module = st.selectbox(
-            "Module", PAYGLOBAL_MODULES,
+            "Module filter", PAYGLOBAL_MODULES,
             index=PAYGLOBAL_MODULES.index(st.session_state.module),
             label_visibility="collapsed",
         )
         if module != st.session_state.module:
             st.session_state.module = module
 
-        # Grok API Key
-        st.markdown("### 🔑 Grok API Key")
-        api_key_input = st.text_input(
-            "Grok API Key",
-            value=st.session_state.api_key,
-            type="password",
-            label_visibility="collapsed",
-            placeholder="gsk_...",
-        )
-        if api_key_input != st.session_state.api_key:
-            st.session_state.api_key   = api_key_input
-            st.session_state.rag_chain = None   # force rebuild
+        # ── API Key (admin only) ─────────────────────────────────────────────
+        if is_admin:
+            st.markdown("<div class='sb-section-label'>API Key</div>", unsafe_allow_html=True)
+            kc1, kc2 = st.columns([5, 1])
+            with kc1:
+                api_key_input = st.text_input(
+                    "API Key", value=st.session_state.api_key,
+                    type="password", label_visibility="collapsed",
+                    placeholder="gsk_… or xai-…",
+                )
+            with kc2:
+                test_key = st.button("✓", help="Test API connection", use_container_width=True)
 
-        st.divider()
+            if api_key_input != st.session_state.api_key:
+                st.session_state.api_key   = api_key_input
+                st.session_state.rag_chain = None
 
-        # Conversation history — role-based (#15)
-        st.markdown("### 💬 Conversations")
+            if test_key:
+                if not api_key_input:
+                    st.warning("Enter a key first.")
+                else:
+                    with st.spinner("Testing…"):
+                        try:
+                            import requests as _rq
+                            from config import GROK_BASE_URL
+                            r = _rq.post(
+                                GROK_BASE_URL.rstrip("/") + "/chat/completions",
+                                headers={"Authorization": f"Bearer {api_key_input}",
+                                         "Content-Type": "application/json"},
+                                json={"model": "llama-3.1-8b-instant",
+                                      "messages": [{"role": "user", "content": "ping"}],
+                                      "max_tokens": 1},
+                                timeout=8,
+                            )
+                            st.success("✅ Connected") if r.status_code in (200,201) else \
+                            st.warning("⚠️ No credits") if "credits" in r.text.lower() else \
+                            st.error(f"❌ {r.status_code}")
+                        except Exception as ex:
+                            st.error(f"❌ {ex}")
+
+        # ── Conversations ───────────────────────────────────────────────────
+        st.markdown("<div class='sb-section-label'>Conversations</div>", unsafe_allow_html=True)
+
+        # Admin: compact stats line + view toggle
+        if is_admin:
+            try:
+                _d = get_analytics_data()
+                st.markdown(
+                    f"<div style='font-size:.63rem;color:#4f6ef7;margin-bottom:.3rem;'>"
+                    f"👥 {_d['total_users']} users &nbsp;·&nbsp; "
+                    f"💬 {_d['total_conversations']} convs &nbsp;·&nbsp; "
+                    f"❓ {_d['total_questions']} queries</div>",
+                    unsafe_allow_html=True
+                )
+            except Exception:
+                pass
+            lbl = "Viewing: All Users" if st.session_state.admin_view_all else "Viewing: My Chats"
+            if st.button(lbl, key="admin_toggle", use_container_width=True):
+                st.session_state.admin_view_all = not st.session_state.admin_view_all
+                st.rerun()
+
         if is_admin and st.session_state.admin_view_all:
             convs = get_all_conversations_admin()
-            st.caption("👥 Showing all users' conversations")
         else:
             convs = get_user_conversations(user["id"])
 
+        search_q = st.text_input(
+            "Search conversations", placeholder="🔍 Search…",
+            label_visibility="collapsed", key="conv_search",
+        )
+        if search_q:
+            convs = [c for c in convs if search_q.lower() in (c.get("title") or "").lower()]
+
         if not convs:
-            st.caption("No conversations yet.")
+            st.caption("No conversations yet." if not search_q else "No matches found.")
+
         for conv in convs:
-            c1, c2 = st.columns([5, 1])
+            c1, c2 = st.columns([6, 1])
             with c1:
-                if is_admin and st.session_state.admin_view_all:
-                    label = f"[{conv.get('username','?')}] {conv['title'] or 'New Chat'}"
-                else:
-                    label = conv["title"] or "New Chat"
-                active = conv["id"] == st.session_state.conv_id
-                if st.button(f"{'▶ ' if active else ''}{label}", key=f"conv_{conv['id']}", use_container_width=True):
+                prefix  = f"[{conv.get('username','?')}] " if (is_admin and st.session_state.admin_view_all) else ""
+                title   = (prefix + (conv["title"] or "New Chat"))[:40]
+                active  = conv["id"] == st.session_state.conv_id
+                if st.button(("▶ " if active else "") + title,
+                             key=f"conv_{conv['id']}", use_container_width=True):
                     load_conversation(conv["id"])
-                    st.session_state.page = "chat"
-                    st.rerun()
+                    st.session_state.page = "chat"; st.rerun()
             with c2:
-                if st.button("🗑", key=f"del_{conv['id']}"):
+                if st.button("×", key=f"del_{conv['id']}"):
                     delete_conversation(conv["id"])
                     if st.session_state.conv_id == conv["id"]:
                         st.session_state.conv_id  = None
@@ -506,97 +529,132 @@ def show_sidebar():
                         st.session_state.rag_chain = None
                     st.rerun()
 
-        st.divider()
-
-        # Document upload
-        st.markdown("### 📄 Upload Documents")
-        uploaded_files = st.file_uploader(
-            "Drop PDFs or DOCX here",
-            type=["pdf", "docx"],
-            accept_multiple_files=True,
-            label_visibility="collapsed",
-        )
-        if uploaded_files:
-            if st.button("⚡ Ingest Documents", use_container_width=True, type="primary"):
-                if not st.session_state.api_key:
-                    st.error("Please enter your Grok API key first.")
-                else:
+        # ── Documents & Export (collapsible) ───────────────────────────────
+        with st.expander("📄 Documents & Export"):
+            uploaded_files = st.file_uploader(
+                "Upload documents", type=["pdf", "docx"],
+                accept_multiple_files=True, label_visibility="collapsed",
+            )
+            if uploaded_files:
+                if st.button("⚡ Ingest", use_container_width=True, type="primary"):
                     total_chunks = 0
-                    with st.spinner("Ingesting documents…"):
+                    with st.spinner("Ingesting…"):
                         for uf in uploaded_files:
                             save_path = UPLOADS_DIR / uf.name
                             save_path.write_bytes(uf.getbuffer())
                             try:
-                                n = ingest_file(save_path)
-                                total_chunks += n
+                                total_chunks += ingest_file(save_path)
                             except Exception as e:
-                                st.error(f"Error ingesting {uf.name}: {e}")
-                    st.success(f"✅ {len(uploaded_files)} file(s) ingested → {total_chunks} chunks added.")
-                    st.session_state.rag_chain = None   # force rebuild with new docs
+                                st.error(f"{uf.name}: {e}")
+                    st.success(f"✅ {len(uploaded_files)} file(s) → {total_chunks} chunks")
+                    st.session_state.rag_chain = None
 
-        st.divider()
+            messages = st.session_state.get("messages", [])
+            if messages:
+                ts  = datetime.now().strftime('%Y%m%d_%H%M')
+                try:
+                    st.download_button(
+                        "⬇️ Download PDF",
+                        data=export_to_pdf(messages, user["username"], st.session_state.module),
+                        file_name=f"chat_{ts}.pdf", mime="application/pdf",
+                        use_container_width=True, key="dl_pdf",
+                    )
+                except Exception:
+                    pass
+                try:
+                    st.download_button(
+                        "⬇️ Download Word",
+                        data=export_to_docx(messages, user["username"], st.session_state.module),
+                        file_name=f"chat_{ts}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True, key="dl_docx",
+                    )
+                except Exception:
+                    pass
 
-        # ── Export Conversation (#10 / #14) ──────────────────────────────
-        st.markdown("### 💾 Export Conversation")
-        messages = st.session_state.get("messages", [])
-        if not messages:
-            st.caption("No messages to export yet.")
-        else:
-            ts    = datetime.now().strftime('%Y%m%d_%H%M')
-            uname = st.session_state.user['username']
-            mod   = st.session_state.module
-
-            # PDF (#10)
-            try:
-                pdf_bytes = export_to_pdf(messages, uname, mod)
-                st.download_button(
-                    label="⬇️ Download as PDF",
-                    data=pdf_bytes,
-                    file_name=f"payglobal_chat_{ts}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key="dl_pdf",
-                )
-            except Exception as e:
-                st.caption(f"⚠️ PDF error: {e}")
-
-            # Word (.docx) (#14)
-            try:
-                docx_bytes = export_to_docx(messages, uname, mod)
-                st.download_button(
-                    label="⬇️ Download as Word (.docx)",
-                    data=docx_bytes,
-                    file_name=f"payglobal_chat_{ts}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                    key="dl_docx",
-                )
-            except Exception as e:
-                st.caption(f"⚠️ Word error: {e}")
-
-        st.divider()
-
-        # Logout
-        if st.button("🚪  Sign Out", use_container_width=True):
+        # ── Sign Out ────────────────────────────────────────────────────────
+        st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
+        if st.button("⎋  Sign Out", key="signout_btn", use_container_width=True):
+            try: st.query_params.clear()
+            except Exception: pass
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
-
 
 
 # ══════════════════════════════════════════════════════════════════════════
 # MAIN CHAT INTERFACE
 # ══════════════════════════════════════════════════════════════════════════
 def show_chat():
-    # Top bar
-    st.markdown(f"""
-    <div class='topbar'>
-        <span class='topbar-title'>🌐 {APP_TITLE}</span>
-        <span class='topbar-user'>
-            Module: <b style='color:#4f6ef7;'>{st.session_state.module}</b>
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    user     = st.session_state.user
+    is_admin = user["role"] == "admin"
+
+    # API status check (admin only, cached per key prefix)
+    if "api_status" not in st.session_state:
+        st.session_state.api_status = "unknown"
+
+    if is_admin and st.session_state.api_key:
+        if st.session_state.get("_last_status_check") != st.session_state.api_key[:8]:
+            try:
+                import requests as _rq
+                from config import GROK_BASE_URL, GROK_MODEL
+                r = _rq.post(
+                    GROK_BASE_URL.rstrip("/") + "/chat/completions",
+                    headers={"Authorization": f"Bearer {st.session_state.api_key}",
+                             "Content-Type": "application/json"},
+                    json={"model": GROK_MODEL,
+                          "messages": [{"role": "user", "content": "ping"}],
+                          "max_tokens": 1},
+                    timeout=5,
+                )
+                st.session_state.api_status = (
+                    "green" if r.status_code in (200, 201)
+                    else "amber" if "credits" in r.text.lower()
+                    else "red"
+                )
+            except Exception:
+                st.session_state.api_status = "red"
+            st.session_state._last_status_check = st.session_state.api_key[:8]
+
+    # Build topbar HTML pieces safely — no nested angle brackets inside f-strings
+    from config import GROK_MODEL as _MDL
+    _module = st.session_state.module
+
+    if is_admin:
+        _sdot  = st.session_state.api_status
+        _slbl  = {"green": "AI Online", "amber": "No Credits",
+                  "red": "Offline", "unknown": "Connecting…"}.get(_sdot, "")
+        _scol  = {"green": "#10b981", "amber": "#f59e0b",
+                  "red": "#ef4444", "unknown": "#4b5563"}.get(_sdot, "#4b5563")
+        _status = (
+            "<span style='display:inline-flex;align-items:center;gap:.35rem;'>"
+            f"<span style='width:7px;height:7px;border-radius:50%;background:{_scol};"
+            f"display:inline-block;box-shadow:0 0 5px {_scol};'></span>"
+            f"<span style='font-size:.72rem;color:#6b7a99;'>{_slbl}</span></span>"
+        )
+        _model_lbl = _MDL.split("/")[-1]
+        _model = (
+            f"<span style='font-size:.65rem;color:#3d4a5c;padding:.1rem .4rem;"
+            f"border:1px solid rgba(48,54,61,0.45);border-radius:5px;'>{_model_lbl}</span>"
+        )
+    else:
+        _status = ""
+        _model  = ""
+
+    _module_html = (
+        f"<span style='font-size:.76rem;'>Module: "
+        f"<b style='color:#4f6ef7;'>{_module}</b></span>"
+    )
+
+    st.markdown(
+        "<div class='topbar'>"
+        f"<span class='topbar-title'>🌐 {APP_TITLE}</span>"
+        f"<span class='topbar-user' style='display:flex;align-items:center;gap:.8rem;'>"
+        f"{_status}{_module_html}{_model}"
+        f"</span></div>",
+        unsafe_allow_html=True,
+    )
+
 
     # Ensure a conversation exists
     if not st.session_state.conv_id:
@@ -610,21 +668,49 @@ def show_chat():
         <div style='text-align:center; padding:4rem 2rem; color:#8b949e;'>
             <div style='font-size:3rem; margin-bottom:1rem;'>💬</div>
             <h3 style='color:#e6edf3; margin-bottom:0.5rem;'>Ask me anything about PayGlobal</h3>
-            <p style='font-size:0.9rem;'>Installation · Configuration · Troubleshooting · Functional Guidance</p>
+            <p style='font-size:0.9rem;'>Installation &middot; Configuration &middot; Troubleshooting &middot; Functional Guidance</p>
         </div>
         """, unsafe_allow_html=True)
 
-        # Example prompts
+        # ── Compact prompt chips (auto-width, centered) ──────────────────────
         example_prompts = [
             "How do I install the PayGlobal Payroll module?",
             "Configure ESS portal step by step",
             "Fix database connection error during setup",
             "Setup employee master data",
         ]
-        cols = st.columns(2)
+        # Render as HTML chips — Streamlit buttons always stretch, so use form submit trick
+        st.markdown("""
+        <style>
+        .chip-row{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:.4rem 0}
+        .prompt-chip{
+            display:inline-flex;align-items:center;gap:.35rem;
+            padding:.42rem .85rem;
+            border-radius:999px;
+            border:1px solid rgba(79,110,247,0.4);
+            background:rgba(79,110,247,0.07);
+            color:#9ab0ff;
+            font-size:.8rem;
+            font-family:'Inter',sans-serif;
+            cursor:pointer;
+            white-space:nowrap;
+            transition:all .18s;
+            outline:none;
+        }
+        .prompt-chip:hover{
+            background:rgba(79,110,247,0.18);
+            border-color:rgba(79,110,247,0.7);
+            color:#c8d8ff;
+            transform:translateY(-1px);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Use Streamlit columns trick: 4 equal columns, each holds one centered chip
+        chip_cols = st.columns(4)
         for i, prompt in enumerate(example_prompts):
-            with cols[i % 2]:
-                if st.button(f"💡 {prompt}", use_container_width=True, key=f"ex_{i}"):
+            with chip_cols[i]:
+                if st.button(f"💡 {prompt}", key=f"ex_{i}"):
                     st.session_state._pending_prompt = prompt
                     st.rerun()
     else:
@@ -680,7 +766,7 @@ def show_chat():
 
     # ── Chat input ──
     user_input = st.chat_input(
-        "Ask about PayGlobal installation, configuration, or troubleshooting…",
+        "Ask about PayGlobal implementation, configuration, or troubleshooting...",
     ) or pending
 
     if user_input:
@@ -971,7 +1057,7 @@ def show_admin_panel():
         st.error("⛔ Access denied. Admin only."); return
 
     from auth import hash_password, register as auth_register
-    from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH, FAISS_INDEX_DIR
+    from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH, FAISS_INDEX_DIR, ALLOW_DANGEROUS_DESERIALIZATION
     from pathlib import Path
 
     st.markdown("""
@@ -1002,7 +1088,7 @@ def show_admin_panel():
                 from langchain_community.vectorstores import FAISS
                 from rag_chain import _get_embeddings
                 vs = FAISS.load_local(str(FAISS_INDEX_DIR), _get_embeddings(),
-                                      allow_dangerous_deserialization=True)
+                                      allow_dangerous_deserialization=ALLOW_DANGEROUS_DESERIALIZATION)
                 faiss_chunks = vs.index.ntotal
             except Exception:
                 pass
@@ -1233,87 +1319,12 @@ def show_admin_panel():
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# FLOATING SIDEBAR TOGGLE — JS-injected, always visible
-# ══════════════════════════════════════════════════════════════════════════
-def inject_sidebar_fab():
-    """
-    Inject a permanent floating ☰ button into the PARENT page via JavaScript.
-    Uses window.parent to escape the Streamlit components iframe so the button
-    lives in the main document and stays visible at all times.
-    A MutationObserver re-adds it if React removes it on re-render.
-    """
-    _components.html("""
-    <script>
-    (function() {
-        var doc = window.parent.document;
-        if (!doc) return;
-
-        function addFAB() {
-            if (doc.getElementById('pg-sidebar-fab')) return;
-
-            // Inject keyframe animation once
-            if (!doc.getElementById('pg-fab-style')) {
-                var s = doc.createElement('style');
-                s.id = 'pg-fab-style';
-                s.textContent =
-                    '@keyframes pg-glow{' +
-                    '0%,100%{box-shadow:4px 0 20px rgba(79,110,247,0.4)}' +
-                    '50%{box-shadow:4px 0 38px rgba(79,110,247,0.75),0 0 0 6px rgba(79,110,247,0.12)}' +
-                    '}' +
-                    '#pg-sidebar-fab{' +
-                    'position:fixed!important;top:50%!important;left:0!important;' +
-                    'transform:translateY(-50%)!important;' +
-                    'z-index:2147483647!important;' +
-                    'background:linear-gradient(135deg,rgba(79,110,247,0.3),rgba(124,58,237,0.2))!important;' +
-                    'border:2px solid rgba(79,110,247,0.75)!important;' +
-                    'border-left:none!important;border-radius:0 14px 14px 0!important;' +
-                    'padding:16px 14px!important;color:#7b9cff!important;' +
-                    'font-size:1.5rem!important;line-height:1!important;' +
-                    'cursor:pointer!important;font-family:Arial,sans-serif!important;' +
-                    'outline:none!important;transition:all 0.2s ease!important;' +
-                    'animation:pg-glow 2.5s ease-in-out infinite!important;' +
-                    '}' +
-                    '#pg-sidebar-fab:hover{' +
-                    'background:rgba(79,110,247,0.5)!important;' +
-                    'padding-right:19px!important;' +
-                    '}';
-                doc.head.appendChild(s);
-            }
-
-            var btn = doc.createElement('button');
-            btn.id = 'pg-sidebar-fab';
-            btn.title = 'Open / Close sidebar';
-            btn.innerHTML = '&#9776;';
-
-            btn.onclick = function() {
-                // Try native Streamlit toggle first
-                var t = doc.querySelector('[data-testid="collapsedControl"]');
-                if (t) { t.click(); return; }
-                // Fallback: sidebar's own toggle button
-                var sb = doc.querySelector('[data-testid="stSidebar"] button');
-                if (sb) sb.click();
-            };
-
-            doc.body.appendChild(btn);
-        }
-
-        addFAB();
-
-        // Re-add after every React re-render
-        new MutationObserver(addFAB).observe(doc.body, {childList: true});
-    })();
-    </script>
-    """, height=0)
-
-
-# ══════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ══════════════════════════════════════════════════════════════════════════
 if not st.session_state.authenticated:
     show_login_page()
 else:
     show_sidebar()
-    inject_sidebar_fab()          # ☰ floating button — always visible
     if st.session_state.page == "analytics":
         show_analytics()
     elif st.session_state.page == "admin":

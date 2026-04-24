@@ -1,0 +1,19 @@
+import db
+
+
+def test_feedback_upsert_single_vote_per_user(isolated_db):
+    user_id = db.create_user("tester", "hashed_pw", "tester@example.com", "user")
+    conv_id = db.create_conversation(user_id, "Test Chat", "All Modules")
+    msg_id = db.save_message(conv_id, "assistant", "Answer", [])
+
+    db.save_feedback(msg_id, user_id, 1)
+    db.save_feedback(msg_id, user_id, -1)
+
+    with db.get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS cnt, MAX(rating) AS rating FROM feedback WHERE message_id = ? AND user_id = ?",
+            (msg_id, user_id),
+        ).fetchone()
+
+    assert row["cnt"] == 1
+    assert row["rating"] == -1

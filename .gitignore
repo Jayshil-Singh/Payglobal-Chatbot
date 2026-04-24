@@ -4,6 +4,8 @@ __pycache__/
 data/faiss_index/
 data/payglobal.db
 data/uploads/
+data/logs/
+data/ingested_manifest.json
 *.egg-info/
 .venv/
 venv/

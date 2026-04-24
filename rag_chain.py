@@ -14,6 +14,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from config import (
     FAISS_INDEX_DIR, GROK_API_KEY, GROK_BASE_URL, GROK_MODEL,
     EMBEDDING_MODEL, RETRIEVER_K, MEMORY_WINDOW, SYSTEM_PROMPT_PATH,
+    ALLOW_DANGEROUS_DESERIALIZATION,
 )
 from ingest import index_exists
 from utils.logger import get_logger
@@ -207,7 +208,7 @@ def get_rag_chain(
     embeddings  = _get_embeddings()
     vectorstore = FAISS.load_local(
         str(FAISS_INDEX_DIR), embeddings,
-        allow_dangerous_deserialization=True,
+        allow_dangerous_deserialization=ALLOW_DANGEROUS_DESERIALIZATION,
     )
     retriever = vectorstore.as_retriever(
         search_type="similarity",

@@ -24,6 +24,7 @@ from typing import List
 from config import (
     RAW_DOCS_DIR, FAISS_INDEX_DIR, DATA_DIR,
     EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP,
+    ALLOW_DANGEROUS_DESERIALIZATION,
 )
 from utils.loader import load_pdfs, load_docx
 from utils.chunker import chunk_documents
@@ -97,7 +98,7 @@ def _upsert_chunks(chunks: list, embeddings, batch_size: int):
         if index_exists():
             vs = FAISS.load_local(
                 str(FAISS_INDEX_DIR), embeddings,
-                allow_dangerous_deserialization=True,
+                allow_dangerous_deserialization=ALLOW_DANGEROUS_DESERIALIZATION,
             )
             vs.add_documents(batch)
         else:
