@@ -118,33 +118,11 @@ def show_admin_panel() -> None:
     )
 
 
-def show_admin_quick_nav() -> None:
-    """Fallback nav visible in main area even if sidebar is collapsed."""
-    user = st.session_state.get("user")
-    if not user or user.get("role") != "admin":
-        return
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("Chat", key="top_nav_chat", width="stretch", type="primary" if st.session_state.page == "chat" else "secondary"):
-            st.session_state.page = "chat"
-            st.rerun()
-    with c2:
-        if st.button("Stats", key="top_nav_stats", width="stretch", type="primary" if st.session_state.page == "analytics" else "secondary"):
-            st.session_state.page = "analytics"
-            st.rerun()
-    with c3:
-        if st.button("Admin", key="top_nav_admin", width="stretch", type="primary" if st.session_state.page == "admin" else "secondary"):
-            st.session_state.page = "admin"
-            st.rerun()
-
-
 if not st.session_state.authenticated:
     show_login_page()
 else:
     try:
         show_sidebar()
-        show_admin_quick_nav()
         if st.session_state.page == "analytics":
             show_analytics()
         elif st.session_state.page == "admin":
