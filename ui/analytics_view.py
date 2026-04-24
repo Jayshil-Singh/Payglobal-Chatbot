@@ -7,6 +7,7 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
     if user["role"] != "admin":
         st.error("⛔ Access denied. Admin only.")
         return
+    is_dark = st.session_state.get("theme", "dark") == "dark"
 
     import pandas as pd
     import plotly.express as px
@@ -26,7 +27,15 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
         data = get_analytics_data_fn()
 
     k1, k2, k3, k4 = st.columns(4)
-    kpi_style = "background:#0d1117; border:1px solid rgba(48,54,61,0.8); border-radius:12px; padding:1.2rem; text-align:center;"
+    kpi_style = (
+        "background:#0d1117; border:1px solid rgba(48,54,61,0.8); border-radius:12px; padding:1.2rem; text-align:center;"
+        if is_dark
+        else "background:#ffffff; border:1px solid rgba(180,193,218,0.8); border-radius:12px; padding:1.2rem; text-align:center; box-shadow:0 2px 8px rgba(79,110,247,0.08);"
+    )
+    text_muted = "#8b949e" if is_dark else "#64748b"
+    chart_bg = "#0d1117" if is_dark else "#ffffff"
+    chart_font = "#e6edf3" if is_dark else "#1e293b"
+    chart_grid = "rgba(48,54,61,0.5)" if is_dark else "rgba(203,213,225,0.8)"
 
     def kpi(col, icon, label, value, color="#4f6ef7"):
         col.markdown(
@@ -56,11 +65,11 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
             cnts = [d["cnt"] for d in daily]
             fig = go.Figure(go.Bar(x=days, y=cnts, marker_color="#4f6ef7", marker_line_color="rgba(79,110,247,0.3)", marker_line_width=1))
             fig.update_layout(
-                paper_bgcolor="#0d1117",
-                plot_bgcolor="#0d1117",
-                font=dict(color="#e6edf3", size=11),
-                xaxis=dict(gridcolor="rgba(48,54,61,0.5)", tickangle=-35),
-                yaxis=dict(gridcolor="rgba(48,54,61,0.5)"),
+                paper_bgcolor=chart_bg,
+                plot_bgcolor=chart_bg,
+                font=dict(color=chart_font, size=11),
+                xaxis=dict(gridcolor=chart_grid, tickangle=-35),
+                yaxis=dict(gridcolor=chart_grid),
                 margin=dict(l=0, r=0, t=10, b=0),
                 height=280,
             )
@@ -76,12 +85,12 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
             values = [m["cnt"] for m in modules]
             fig2 = go.Figure(go.Pie(labels=labels, values=values, hole=0.45, marker=dict(colors=px.colors.qualitative.Plotly), textfont=dict(size=11)))
             fig2.update_layout(
-                paper_bgcolor="#0d1117",
-                font=dict(color="#e6edf3", size=11),
+                paper_bgcolor=chart_bg,
+                font=dict(color=chart_font, size=11),
                 margin=dict(l=0, r=0, t=10, b=0),
                 height=280,
                 showlegend=True,
-                legend=dict(bgcolor="#0d1117", font=dict(size=10)),
+                legend=dict(bgcolor=chart_bg, font=dict(size=10, color=chart_font)),
             )
             st.plotly_chart(fig2, width="stretch")
         else:
@@ -100,11 +109,11 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
                 go.Indicator(
                     mode="gauge+number",
                     value=pct,
-                    number={"suffix": "%", "font": {"color": "#e6edf3", "size": 32}},
+                    number={"suffix": "%", "font": {"color": chart_font, "size": 32}},
                     gauge={
-                        "axis": {"range": [0, 100], "tickcolor": "#8b949e"},
+                        "axis": {"range": [0, 100], "tickcolor": text_muted},
                         "bar": {"color": "#10b981"},
-                        "bgcolor": "#161b27",
+                        "bgcolor": "#161b27" if is_dark else "#eef2ff",
                         "steps": [
                             {"range": [0, 50], "color": "rgba(239,68,68,0.15)"},
                             {"range": [50, 75], "color": "rgba(245,158,11,0.15)"},
@@ -113,10 +122,10 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
                     },
                 )
             )
-            fig3.update_layout(paper_bgcolor="#0d1117", font=dict(color="#e6edf3"), margin=dict(l=10, r=10, t=20, b=10), height=220)
+            fig3.update_layout(paper_bgcolor=chart_bg, font=dict(color=chart_font), margin=dict(l=10, r=10, t=20, b=10), height=220)
             st.plotly_chart(fig3, width="stretch")
             st.markdown(
-                f"<div style='text-align:center; font-size:0.8rem; color:#8b949e;'>👍 {up} &nbsp;|&nbsp; 👎 {dn} &nbsp;|&nbsp; Total {total_fb}</div>",
+                f"<div style='text-align:center; font-size:0.8rem; color:{text_muted};'>👍 {up} &nbsp;|&nbsp; 👎 {dn} &nbsp;|&nbsp; Total {total_fb}</div>",
                 unsafe_allow_html=True,
             )
         else:
