@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # ── Imports ────────────────────────────────────────────────────────────────
-from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR
+from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR, RATE_LIMIT_PER_HOUR
 from auth import bootstrap_admin, login, register
 from db import (
     create_conversation, get_user_conversations, get_messages,
@@ -29,6 +29,8 @@ from ui.theme import apply_theme as apply_enterprise_theme
 from services.state import init_state as init_app_state
 from ui.auth_view import render_login_page
 from ui.sidebar_view import render_sidebar
+from ui.analytics_view import render_analytics
+from ui.admin_view import render_admin_panel
 from services.chat_service import (
     load_chain as load_chain_service,
     start_new_conversation as start_new_conversation_service,
@@ -501,6 +503,10 @@ def _handle_message(user_input: str):
 # ══════════════════════════════════════════════════════════════════════════
 def show_analytics():
     """Admin-only analytics dashboard with usage stats and charts."""
+    return render_analytics(
+        get_analytics_data_fn=get_analytics_data,
+        get_all_users_fn=get_all_users,
+    )
     user = st.session_state.user
     if user["role"] != "admin":
         st.error("⛔ Access denied. Admin only.")
@@ -666,6 +672,16 @@ def show_analytics():
 # ══════════════════════════════════════════════════════════════════════════
 def show_admin_panel():
     """Comprehensive admin control panel — 6 management tabs."""
+    return render_admin_panel(
+        uploads_dir=UPLOADS_DIR,
+        rate_limit_per_hour=RATE_LIMIT_PER_HOUR,
+        get_analytics_data_fn=get_analytics_data,
+        get_all_users_fn=get_all_users,
+        update_user_role_fn=update_user_role,
+        reset_user_password_fn=reset_user_password,
+        delete_user_fn=delete_user,
+        get_recent_audit_log_fn=get_recent_audit_log,
+    )
     user = st.session_state.user
     if user["role"] != "admin":
         st.error("⛔ Access denied. Admin only."); return
