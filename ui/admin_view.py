@@ -249,8 +249,13 @@ def render_admin_panel(
             st.info("No activity logged yet.")
         else:
             df = pd.DataFrame(logs)
+            expected_cols = ["username", "conversation", "module", "role", "content", "timestamp"]
+            for col in expected_cols:
+                if col not in df.columns:
+                    df[col] = ""
+            df = df[expected_cols]
             df.columns = ["User", "Conversation", "Module", "Role", "Question", "Timestamp"]
-            df["Timestamp"] = df["Timestamp"].str[:16]
-            df["Question"] = df["Question"].str[:120] + "…"
+            df["Timestamp"] = df["Timestamp"].astype(str).str[:16]
+            df["Question"] = df["Question"].astype(str).str[:120] + "…"
             df.index = df.index + 1
             st.dataframe(df[["Timestamp", "User", "Module", "Question"]], width="stretch", height=460)

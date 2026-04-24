@@ -142,12 +142,19 @@ def show_admin_quick_nav() -> None:
 if not st.session_state.authenticated:
     show_login_page()
 else:
-    show_sidebar()
-    show_admin_quick_nav()
-    if st.session_state.page == "analytics":
-        show_analytics()
-    elif st.session_state.page == "admin":
-        show_admin_panel()
-    else:
-        show_chat()
+    try:
+        show_sidebar()
+        show_admin_quick_nav()
+        if st.session_state.page == "analytics":
+            show_analytics()
+        elif st.session_state.page == "admin":
+            show_admin_panel()
+        else:
+            show_chat()
+    except Exception as exc:
+        st.error("A page rendering error occurred. Returning to Chat is recommended.")
+        st.exception(exc)
+        if st.button("Return to Chat", key="recover_to_chat", type="primary", width="stretch"):
+            st.session_state.page = "chat"
+            st.rerun()
 

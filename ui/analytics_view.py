@@ -137,7 +137,12 @@ def render_analytics(get_analytics_data_fn, get_all_users_fn) -> None:
     st.markdown("#### 👤 Registered Users")
     all_users = get_all_users_fn()
     if all_users:
-        udf = pd.DataFrame(all_users)[["username", "email", "role", "created_at", "last_login"]]
+        udf = pd.DataFrame(all_users)
+        expected_cols = ["username", "email", "role", "created_at", "last_login"]
+        for col in expected_cols:
+            if col not in udf.columns:
+                udf[col] = ""
+        udf = udf[expected_cols]
         udf.columns = ["Username", "Email", "Role", "Registered", "Last Login"]
         udf.index = udf.index + 1
         st.dataframe(udf, width="stretch")
