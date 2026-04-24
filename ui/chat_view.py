@@ -4,6 +4,7 @@ import streamlit as st
 def render_chat(*, app_title: str, save_feedback_fn, export_answer_pdf_fn, start_new_conversation_fn, handle_message_fn) -> None:
     user = st.session_state.user
     is_admin = user["role"] == "admin"
+    is_dark = st.session_state.get("theme", "dark") == "dark"
 
     if "api_status" not in st.session_state:
         st.session_state.api_status = "unknown"
@@ -32,13 +33,19 @@ def render_chat(*, app_title: str, save_feedback_fn, export_answer_pdf_fn, start
         sdot = st.session_state.api_status
         slbl = {"green": "AI Online", "amber": "No Credits", "red": "Offline", "unknown": "Connecting…"}.get(sdot, "")
         scol = {"green": "#10b981", "amber": "#f59e0b", "red": "#ef4444", "unknown": "#4b5563"}.get(sdot, "#4b5563")
+        status_text_color = "#6b7a99" if is_dark else "#4b5563"
+        model_text_color = "#3d4a5c" if is_dark else "#475569"
+        model_border = "rgba(48,54,61,0.45)" if is_dark else "rgba(148,163,184,0.6)"
         status = (
             "<span style='display:inline-flex;align-items:center;gap:.35rem;'>"
             f"<span style='width:7px;height:7px;border-radius:50%;background:{scol};display:inline-block;box-shadow:0 0 5px {scol};'></span>"
-            f"<span style='font-size:.72rem;color:#6b7a99;'>{slbl}</span></span>"
+            f"<span style='font-size:.72rem;color:{status_text_color};'>{slbl}</span></span>"
         )
         model_lbl = _MDL.split("/")[-1]
-        model = f"<span style='font-size:.65rem;color:#3d4a5c;padding:.1rem .4rem;border:1px solid rgba(48,54,61,0.45);border-radius:5px;'>{model_lbl}</span>"
+        model = (
+            f"<span style='font-size:.65rem;color:{model_text_color};padding:.1rem .4rem;"
+            f"border:1px solid {model_border};border-radius:5px;'>{model_lbl}</span>"
+        )
     else:
         status = ""
         model = ""
@@ -59,11 +66,13 @@ def render_chat(*, app_title: str, save_feedback_fn, export_answer_pdf_fn, start
 
     messages = st.session_state.messages
     if not messages:
+        hero_text = "#e6edf3" if is_dark else "#1e293b"
+        hero_subtext = "#8b949e" if is_dark else "#64748b"
         st.markdown(
-            """
-        <div style='text-align:center; padding:4rem 2rem; color:#8b949e;'>
+            f"""
+        <div style='text-align:center; padding:4rem 2rem; color:{hero_subtext};'>
             <div style='font-size:3rem; margin-bottom:1rem;'>💬</div>
-            <h3 style='color:#e6edf3; margin-bottom:0.5rem;'>Ask me anything about PayGlobal</h3>
+            <h3 style='color:{hero_text}; margin-bottom:0.5rem;'>Ask me anything about PayGlobal</h3>
             <p style='font-size:0.9rem;'>Installation &middot; Configuration &middot; Troubleshooting &middot; Functional Guidance</p>
         </div>
         """,
