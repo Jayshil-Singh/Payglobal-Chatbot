@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ── Imports ────────────────────────────────────────────────────────────────
-from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR, RATE_LIMIT_PER_HOUR
+from config import PAYGLOBAL_MODULES, APP_TITLE, GROK_API_KEY, UPLOADS_DIR
 from auth import bootstrap_admin, login, register
 from db import (
     create_conversation, get_user_conversations, get_messages,
@@ -29,6 +29,13 @@ from utils.exporter import export_to_pdf, export_to_docx, export_answer_pdf
 from ui.theme import apply_theme as apply_enterprise_theme
 from services.state import init_state as init_app_state
 from ui.auth_view import render_login_page
+from services.chat_service import (
+    load_chain as load_chain_service,
+    start_new_conversation as start_new_conversation_service,
+    load_conversation as load_conversation_service,
+    auto_title as auto_title_service,
+    handle_message as handle_message_service,
+)
 
 # Bootstrap DB + admin account on every cold start
 bootstrap_admin()
@@ -252,54 +259,20 @@ apply_enterprise_theme()
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════
 def load_chain():
-    """(Re)build the RAG chain, pulling history from current conversation."""
-    history = []
-    if st.session_state.conv_id:
-        msgs = get_messages(st.session_state.conv_id)
-        pairs = []
-        buf = {}
-        for m in msgs:
-            if m["role"] == "user":
-                buf = {"q": m["content"]}
-            elif m["role"] == "assistant" and buf:
-                pairs.append((buf["q"], m["content"]))
-                buf = {}
-        history = pairs
-
-    st.session_state.rag_chain = get_rag_chain(
-        api_key=st.session_state.api_key,
-        chat_history=history,
-    )
+    load_chain_service()
 
 
 def start_new_conversation():
-    user_id = st.session_state.user["id"]
-    conv_id = create_conversation(user_id, "New Chat", st.session_state.module)
-    st.session_state.conv_id  = conv_id
-    st.session_state.messages = []
-    st.session_state.rag_chain = None
+    start_new_conversation_service()
 
 
 def load_conversation(conv_id: int):
-    st.session_state.conv_id = conv_id
-    msgs = get_messages(conv_id)
-    st.session_state.messages = [
-        {
-            "role":    m["role"],
-            "content": m["content"],
-            "sources": m["sources"],
-            "msg_id":  m["id"],     # restore DB id so feedback buttons work
-        }
-        for m in msgs
-    ]
-    st.session_state.rag_chain = None   # will be rebuilt on next ask
+    load_conversation_service(conv_id)
 
 
 
 def auto_title(conv_id: int, first_user_msg: str):
-    """Set conversation title from first user message."""
-    title = first_user_msg[:55] + ("…" if len(first_user_msg) > 55 else "")
-    update_conversation_title(conv_id, title)
+    auto_title_service(conv_id, first_user_msg)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -721,112 +694,7 @@ def show_chat():
 
 
 def _handle_message(user_input: str):
-    """Process a user message: save, run RAG, save response."""
-    conv_id = st.session_state.conv_id
-    user    = st.session_state.user
-
-    # ── Rate limiting (#12) — skip for admins ──
-    if user["role"] != "admin":
-        count = get_request_count_last_hour(user["id"])
-        if count >= RATE_LIMIT_PER_HOUR:
-            st.warning(
-                f"⏳ Rate limit reached: you can send up to **{RATE_LIMIT_PER_HOUR} messages per hour**. "
-                f"You've sent **{count}** in the last 60 minutes. Please wait before trying again."
-            )
-            return
-
-    # Add user message to UI
-    st.session_state.messages.append({"role": "user", "content": user_input, "sources": []})
-    save_message(conv_id, "user", user_input)
-
-    # Auto-title on first message
-    if len(st.session_state.messages) == 1:
-        auto_title(conv_id, user_input)
-
-    # Build chain if needed
-    if st.session_state.rag_chain is None:
-        if not st.session_state.api_key:
-            st.warning("⚠️ Please enter your Grok API Key in the sidebar.")
-            return
-        if not index_exists():
-            st.warning("⚠️ No documents indexed yet. Upload PDFs/DOCX in the sidebar and click **Ingest Documents**.")
-            return
-        with st.spinner("Initialising AI engine…"):
-            try:
-                load_chain()
-            except Exception as e:
-                err = str(e).lower()
-                if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401")):
-                    st.error("🔑 Invalid API key — please update it in the sidebar and try again.")
-                else:
-                    st.error("⚠️ Could not start the AI engine. Please check your API key in the sidebar.")
-                return
-
-    # Get AI response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking…"):
-            try:
-                result  = ask(st.session_state.rag_chain, user_input)
-                answer  = result["answer"]
-                sources = result["sources"]     # list of {file, page} dicts
-                retries = result.get("retries", 0)
-                if retries > 0:
-                    st.caption(f"⚠️ Needed {retries} retry attempt(s) to reach Grok API.")
-            except Exception as e:
-                err = str(e).lower()
-                if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401", "403")):
-                    answer = (
-                        "🔑 **Invalid API Key**\n\n"
-                        "Your Grok API key doesn't seem to be working. "
-                        "Please update it in the sidebar under **🔑 Grok API Key** and try again.\n\n"
-                        "You can get a key at [console.x.ai](https://console.x.ai/)."
-                    )
-                elif any(k in err for k in ("rate", "quota", "429", "too many")):
-                    answer = (
-                        "⏱️ **Too Many Requests**\n\n"
-                        "The AI service is temporarily busy. Please wait 30 seconds and try again."
-                    )
-                elif any(k in err for k in ("connect", "timeout", "network", "503", "502", "unavailable")):
-                    answer = (
-                        "🌐 **Connection Issue**\n\n"
-                        "Couldn't reach the AI service. Please check your internet connection and try again."
-                    )
-                elif any(k in err for k in ("index", "embed", "faiss", "no document")):
-                    answer = (
-                        "📄 **No Documents Indexed**\n\n"
-                        "Please upload PDF or DOCX files using the sidebar and click **⚡ Ingest Documents** first."
-                    )
-                else:
-                    answer = (
-                        "⚠️ **Something went wrong**\n\n"
-                        "Please try again in a moment. If the issue persists, "
-                        "verify your API key is correct in the sidebar."
-                    )
-                sources = []
-
-        st.markdown(answer)
-
-        # Page-number citations
-        if sources:
-            with st.expander(f"📚 Sources ({len(sources)} reference(s))"):
-                for src in sources:
-                    if isinstance(src, dict):
-                        file = src.get("file", "Unknown")
-                        page = src.get("page")
-                        label = f"📄 `{file}`" + (f"  —  {page}" if page else "")
-                    else:
-                        label = f"📄 `{src}`"
-                    st.markdown(label)
-
-    # Persist AI message and capture its DB id for feedback
-    msg_id = save_message(conv_id, "assistant", answer, sources)
-    st.session_state.messages.append({
-        "role":    "assistant",
-        "content": answer,
-        "sources": sources,
-        "msg_id":  msg_id,
-    })
-    st.rerun()
+    handle_message_service(user_input)
 
 
 # ══════════════════════════════════════════════════════════════════════════
