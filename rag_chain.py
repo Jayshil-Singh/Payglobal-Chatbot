@@ -14,7 +14,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from config import (
     FAISS_INDEX_DIR, GROK_API_KEY, GROK_BASE_URL, GROK_MODEL,
     EMBEDDING_MODEL, RETRIEVER_K, MEMORY_WINDOW, SYSTEM_PROMPT_PATH,
-    ALLOW_DANGEROUS_DESERIALIZATION,
+    ALLOW_DANGEROUS_DESERIALIZATION, ENABLE_RERANKER,
 )
 from ingest import index_exists
 from utils.logger import get_logger
@@ -167,6 +167,8 @@ def _rerank_docs(question: str, docs: list, top_k: int = RETRIEVER_K) -> list:
     global _reranker_model
     if not docs:
         return docs
+    if not ENABLE_RERANKER:
+        return docs[:top_k]
     try:
         from sentence_transformers import CrossEncoder
         if _reranker_model is None:

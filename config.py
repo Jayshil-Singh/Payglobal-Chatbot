@@ -59,6 +59,8 @@ DEFAULT_ADMIN_PASS = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "")
 # ── Security ────────────────────────────────────────────────────────────────
 # Keep disabled in production. Enabling allows pickle-backed FAISS loads.
 ALLOW_DANGEROUS_DESERIALIZATION = os.getenv("ALLOW_DANGEROUS_DESERIALIZATION", "false").lower() == "true"
+# Cloud-safe default: keep heavy cross-encoder reranker off unless explicitly enabled.
+ENABLE_RERANKER = os.getenv("ENABLE_RERANKER", "false").lower() == "true"
 
 # ── Rate Limiting ──────────────────────────────────────────────────────────
 RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "50"))
