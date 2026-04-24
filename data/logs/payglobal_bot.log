@@ -17211,3 +17211,17 @@
 [2026-04-24 14:20:31] WARNING  rag_chain — Grok API error (attempt 2/3), retrying in 4s: Error code: 403 - {'code': 'The caller does not have permission to execute the specified operation', 'error': "Your newly created team doesn't have any credits or licenses yet. You can purchase those on https://console.x.ai/team/ec0a1d99-7c58-46b4-a5f1-9db1602bc753."}
 [2026-04-24 14:20:36] ERROR    rag_chain — All 3 attempts failed: Error code: 403 - {'code': 'The caller does not have permission to execute the specified operation', 'error': "Your newly created team doesn't have any credits or licenses yet. You can purchase those on https://console.x.ai/team/ec0a1d99-7c58-46b4-a5f1-9db1602bc753."}
 [2026-04-24 14:20:37] INFO     db — Database initialized.
+[2026-04-24 14:30:09] INFO     db — Database initialized.
+[2026-04-24 14:30:59] INFO     db — Database initialized.
+[2026-04-24 14:31:46] INFO     db — Database initialized.
+[2026-04-24 14:31:47] INFO     auth — Login successful: admin
+[2026-04-24 14:31:48] INFO     db — Database initialized.
+[2026-04-24 14:31:56] INFO     db — Database initialized.
+[2026-04-24 14:31:57] INFO     db — Database initialized.
+[2026-04-24 14:32:18] INFO     rag_chain — RAG chain ready — openai/gpt-oss-120b @ https://api.groq.com/openai/v1
+[2026-04-24 14:32:18] INFO     rag_chain — Query expanded: 'Configure ESS portal step by step' -> 'Configure ESS (Employee Self Service) portal step by step'
+[2026-04-24 14:32:19] INFO     rag_chain — Multi-query: 4 queries -> 10 unique chunks
+[2026-04-24 14:32:31] INFO     rag_chain — Re-ranker: 10 chunks -> kept top 5
+[2026-04-24 14:32:36] INFO     db — Database initialized.
+[2026-04-24 14:36:15] INFO     db — Database initialized.
+[2026-04-24 14:36:16] INFO     db — Database initialized.
