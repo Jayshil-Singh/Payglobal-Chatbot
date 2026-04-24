@@ -1,0 +1,18 @@
+[server]
+# Use polling watcher — avoids Streamlit trying to inspect every
+# transformers model file (which floods logs with torchvision errors).
+fileWatcherType = "none"
+
+# Only watch your own source files, not the entire venv
+folderWatchBlacklist = ["venv", ".venv", "env", "__pycache__"]
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor       = "#4f6ef7"
+backgroundColor    = "#070b14"
+secondaryBackgroundColor = "#0d1421"
+textColor          = "#e6edf3"
+font               = "sans serif"
