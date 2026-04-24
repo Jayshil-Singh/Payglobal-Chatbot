@@ -37,7 +37,7 @@ def main() -> int:
     args = parser.parse_args()
 
     upsert_admin(args.username, args.password, args.email)
-    print(f"✅ Admin user '{args.username}' password updated (role=admin).")
+    print(f"OK: Admin user '{args.username}' password updated (role=admin).")
     return 0
 
 
