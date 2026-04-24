@@ -61,9 +61,6 @@ def render_chat(*, app_title: str, save_feedback_fn, export_answer_pdf_fn, start
         unsafe_allow_html=True,
     )
 
-    if not st.session_state.conv_id:
-        start_new_conversation_fn()
-
     messages = st.session_state.messages
     if not messages:
         hero_text = "#e6edf3" if is_dark else "#1e293b"

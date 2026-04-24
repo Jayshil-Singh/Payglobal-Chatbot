@@ -34,9 +34,8 @@ def load_chain() -> None:
 
 
 def start_new_conversation() -> None:
-    user_id = st.session_state.user["id"]
-    conv_id = create_conversation(user_id, "New Chat", st.session_state.module)
-    st.session_state.conv_id = conv_id
+    # Do not persist an empty chat in DB.
+    st.session_state.conv_id = None
     st.session_state.messages = []
     st.session_state.rag_chain = None
 
@@ -73,6 +72,10 @@ def handle_message(user_input: str) -> None:
                 f"You've sent **{count}** in the last 60 minutes. Please wait before trying again."
             )
             return
+
+    if conv_id is None:
+        conv_id = create_conversation(user["id"], "New Chat", st.session_state.module)
+        st.session_state.conv_id = conv_id
 
     st.session_state.messages.append({"role": "user", "content": user_input, "sources": []})
     save_message(conv_id, "user", user_input)
