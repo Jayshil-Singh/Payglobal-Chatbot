@@ -82,7 +82,7 @@ def handle_message(user_input: str) -> None:
 
     if st.session_state.rag_chain is None:
         if not st.session_state.api_key:
-            st.warning("⚠️ Please enter your Grok API Key in the sidebar.")
+            st.warning("⚠️ Please enter your **Groq** API Key in the sidebar.")
             return
         if not index_exists():
             st.warning("⚠️ No documents indexed yet. Upload PDFs/DOCX in the sidebar and click **Ingest Documents**.")
@@ -93,7 +93,7 @@ def handle_message(user_input: str) -> None:
             except Exception as exc:
                 err = str(exc).lower()
                 if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401")):
-                    st.error("🔑 Invalid API key — please update it in the sidebar and try again.")
+                    st.error("🔑 Invalid Groq API key — please update it in the sidebar and try again.")
                 else:
                     st.error("⚠️ Could not start the AI engine. Please check your API key in the sidebar.")
                 return
@@ -112,9 +112,9 @@ def handle_message(user_input: str) -> None:
                 if any(k in err for k in ("auth", "api key", "invalid", "incorrect", "401", "403")):
                     answer = (
                         "🔑 **Invalid API Key**\n\n"
-                        "Your Grok API key doesn't seem to be working. "
-                        "Please update it in the sidebar under **🔑 Grok API Key** and try again.\n\n"
-                        "You can get a key at [console.x.ai](https://console.x.ai/)."
+                        "Your Groq API key doesn't seem to be working. "
+                        "Please update it in the sidebar under **API Key** and try again.\n\n"
+                        "You can get a key at [console.groq.com](https://console.groq.com/)."
                     )
                 elif any(k in err for k in ("rate", "quota", "429", "too many")):
                     answer = (

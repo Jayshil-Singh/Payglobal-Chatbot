@@ -19,44 +19,23 @@ def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
             unsafe_allow_html=True,
         )
 
-        tab_login, tab_register = st.tabs(["Sign In", "Register"])
+        # Enterprise mode: no self-registration. Admins provision users in Admin panel.
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
 
-        with tab_login:
-            with st.form("login_form"):
-                username = st.text_input("Username", placeholder="Enter your username")
-                password = st.text_input("Password", type="password", placeholder="Enter your password")
-                submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
-
-            if submitted:
-                if not username or not password:
-                    st.error("Please enter both username and password.")
+        if submitted:
+            if not username or not password:
+                st.error("Please enter both username and password.")
+            else:
+                user = login_fn(username, password)
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user = user
+                    st.session_state.api_key = default_api_key
+                    st.rerun()
                 else:
-                    user = login_fn(username, password)
-                    if user:
-                        st.session_state.authenticated = True
-                        st.session_state.user = user
-                        st.session_state.api_key = default_api_key
-                        st.rerun()
-                    else:
-                        st.error("Invalid username or password.")
+                    st.error("Invalid username or password.")
 
-        with tab_register:
-            with st.form("reg_form"):
-                new_user = st.text_input("Username", placeholder="Choose a username")
-                new_email = st.text_input("Email (optional)", placeholder="your@email.com")
-                new_pass = st.text_input("Password", type="password", placeholder="Min 8 characters")
-                new_pass2 = st.text_input("Confirm Password", type="password", placeholder="Repeat password")
-                reg_btn = st.form_submit_button("Create Account", use_container_width=True, type="primary")
-
-            if reg_btn:
-                if new_pass != new_pass2:
-                    st.error("Passwords do not match.")
-                else:
-                    try:
-                        user = register_fn(new_user, new_pass, new_email)
-                        st.session_state.authenticated = True
-                        st.session_state.user = user
-                        st.success("Account created! Welcome aboard")
-                        st.rerun()
-                    except ValueError as exc:
-                        st.error(str(exc))
+        st.caption("No self-registration. Ask an admin to create your account.")
