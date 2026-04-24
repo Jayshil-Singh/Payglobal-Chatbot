@@ -4,9 +4,8 @@ from pathlib import Path
 import streamlit as st
 
 from auth import hash_password, register as auth_register
-from config import ALLOW_DANGEROUS_DESERIALIZATION, GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
+from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
 from ingest import ingest_file, index_exists
-from rag_chain import _get_embeddings
 
 
 def render_admin_panel(
@@ -48,12 +47,13 @@ def render_admin_panel(
         faiss_chunks = 0
         if idx_ok:
             try:
-                from langchain_community.vectorstores import FAISS
+                import faiss
 
-                vs = FAISS.load_local(str(uploads_dir.parent / "faiss_index"), _get_embeddings(), allow_dangerous_deserialization=ALLOW_DANGEROUS_DESERIALIZATION)
-                faiss_chunks = vs.index.ntotal
+                idx = faiss.read_index(str(uploads_dir.parent / "faiss_index" / "index.faiss"))
+                faiss_chunks = int(idx.ntotal)
             except Exception:
-                pass
+                # Keep panel responsive even if FAISS metadata read fails.
+                faiss_chunks = 0
         sc4.metric("Indexed Chunks", faiss_chunks)
 
         st.divider()
