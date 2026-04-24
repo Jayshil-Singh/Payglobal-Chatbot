@@ -79,4 +79,9 @@ def set_new_password(user_id: int, new_password: str, require_change_on_next_log
         raise ValueError("Password must be at least 8 characters.")
     reset_user_password(user_id, hash_password(new_password))
     set_must_change_password(user_id, require_change_on_next_login)
+    log.info(
+        "Password changed for user_id=%s; must_change_password=%s",
+        user_id,
+        1 if require_change_on_next_login else 0,
+    )
 
