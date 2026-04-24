@@ -2,7 +2,6 @@
 __pycache__/
 *.pyc
 data/faiss_index/
-data/payglobal.db
 data/uploads/
 data/logs/
 data/ingested_manifest.json
