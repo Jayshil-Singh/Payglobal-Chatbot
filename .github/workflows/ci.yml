@@ -38,7 +38,7 @@ jobs:
         run: pytest -q -p no:cacheprovider
 
       - name: E2E smoke (Playwright) — optional
-        if: ${{ env.E2E_BASE_URL != '' }}
+        if: ${{ secrets.E2E_BASE_URL != '' }}
         env:
           E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
           E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
