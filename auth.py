@@ -37,6 +37,19 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
+def validate_password_strength(password: str) -> None:
+    if len(password) < PASSWORD_MIN_LENGTH:
+        raise ValueError(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
+    if not any(ch.islower() for ch in password):
+        raise ValueError("Password must include at least one lowercase letter.")
+    if not any(ch.isupper() for ch in password):
+        raise ValueError("Password must include at least one uppercase letter.")
+    if not any(ch.isdigit() for ch in password):
+        raise ValueError("Password must include at least one number.")
+    if not any(ch in "!@#$%^&*()_+-=[]{}|;:,.<>?/" for ch in password):
+        raise ValueError("Password must include at least one special character.")
+
+
 def bootstrap_admin():
     """Create bootstrap admin account if configured and not present."""
     init_db()
@@ -100,8 +113,7 @@ def register(username: str, password: str, email: str = "", role: str = "user") 
     username = username.strip().lower()
     if get_user(username):
         raise ValueError(f"Username '{username}' is already taken.")
-    if len(password) < PASSWORD_MIN_LENGTH:
-        raise ValueError(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
+    validate_password_strength(password)
     uid = create_user(
         username=username,
         password_hash=hash_password(password),
@@ -113,13 +125,22 @@ def register(username: str, password: str, email: str = "", role: str = "user") 
 
 
 def generate_temp_password(length: int = 12) -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+    if length < 8:
+        length = 8
+    lower = secrets.choice(string.ascii_lowercase)
+    upper = secrets.choice(string.ascii_uppercase)
+    digit = secrets.choice(string.digits)
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?/"
+    special = secrets.choice(special_chars)
+    alphabet = string.ascii_letters + string.digits + special_chars
+    remaining = [secrets.choice(alphabet) for _ in range(length - 4)]
+    chars = [lower, upper, digit, special, *remaining]
+    secrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
 
 
 def set_new_password(user_id: int, new_password: str, require_change_on_next_login: bool = False) -> None:
-    if len(new_password) < PASSWORD_MIN_LENGTH:
-        raise ValueError(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
+    validate_password_strength(new_password)
     reset_user_password(user_id, hash_password(new_password))
     set_must_change_password(user_id, require_change_on_next_login)
     log.info(

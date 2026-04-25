@@ -4,6 +4,8 @@ PayGlobal AI Assistant — Streamlit entrypoint.
 This file intentionally stays small and delegates to UI + service modules.
 """
 
+import time
+
 import streamlit as st
 
 from auth import bootstrap_admin, login, register, set_new_password
@@ -14,6 +16,7 @@ from config import (
     RATE_LIMIT_PER_HOUR,
     SENDGRID_API_KEY,
     SENDGRID_FROM_EMAIL,
+    SESSION_IDLE_TIMEOUT_MINUTES,
     SMTP_HOST,
     SMTP_PASSWORD,
     SMTP_PORT,
@@ -72,6 +75,25 @@ st.set_page_config(
 bootstrap_admin()
 init_app_state(GROK_API_KEY)
 apply_enterprise_theme()
+
+
+def enforce_idle_timeout() -> None:
+    if not st.session_state.get("authenticated"):
+        return
+    now_ts = time.time()
+    last_activity = float(st.session_state.get("last_activity_ts", now_ts))
+    timeout_seconds = max(1, int(SESSION_IDLE_TIMEOUT_MINUTES)) * 60
+    if now_ts - last_activity > timeout_seconds:
+        st.session_state.authenticated = False
+        st.session_state.user = None
+        st.session_state.conv_id = None
+        st.session_state.messages = []
+        st.session_state.rag_chain = None
+        st.session_state.page = "chat"
+        st.session_state.last_activity_ts = now_ts
+        st.warning("You were signed out due to inactivity. Please sign in again.")
+        st.rerun()
+    st.session_state.last_activity_ts = now_ts
 
 
 def load_chain() -> None:
@@ -154,6 +176,9 @@ def show_admin_panel() -> None:
         get_recent_audit_log_fn=get_recent_audit_log,
     )
 
+
+if st.session_state.get("authenticated"):
+    enforce_idle_timeout()
 
 if not st.session_state.authenticated:
     show_login_page()

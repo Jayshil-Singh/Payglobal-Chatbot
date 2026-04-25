@@ -4,7 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from auth import generate_temp_password, hash_password, set_new_password
+from auth import generate_temp_password, hash_password, set_new_password, validate_password_strength
 from auth import register as auth_register
 from config import GROK_BASE_URL, GROK_MODEL, PASSWORD_MIN_LENGTH, SYSTEM_PROMPT_PATH
 from ingest import index_exists, ingest_file
@@ -149,6 +149,11 @@ def render_admin_panel(
                         new_pw = st.text_input("New password", key=f"npw_{item['id']}", placeholder="New password…", type="password", label_visibility="collapsed")
                         if st.button("🔑 Reset", key=f"rpw_{item['id']}", width="stretch"):
                             if new_pw and len(new_pw) >= PASSWORD_MIN_LENGTH:
+                                try:
+                                    validate_password_strength(new_pw)
+                                except ValueError as exc:
+                                    st.warning(str(exc))
+                                    continue
                                 reset_user_password_fn(item["id"], hash_password(new_pw))
                                 add_admin_audit_event_fn(
                                     actor_user_id=user["id"],
@@ -434,6 +439,14 @@ def render_admin_panel(
             edf["Timestamp"] = edf["Timestamp"].astype(str).str[:19]
             edf.index = edf.index + 1
             st.dataframe(edf, width="stretch", height=260)
+            csv_bytes = edf.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Admin Audit CSV",
+                data=csv_bytes,
+                file_name=f"admin_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                width="stretch",
+            )
 
         st.divider()
         st.markdown("#### 📋 Recent User Queries")
