@@ -21,8 +21,10 @@ from config import (
     UPLOADS_DIR,
 )
 from db import (
+    add_admin_audit_event,
     delete_conversation,
     delete_user,
+    get_admin_audit_events,
     get_all_conversations_admin,
     get_all_users,
     get_analytics_data,
@@ -146,6 +148,8 @@ def show_admin_panel() -> None:
         reset_user_password_fn=reset_user_password,
         set_user_active_fn=set_user_active,
         unlock_user_fn=unlock_user,
+        add_admin_audit_event_fn=add_admin_audit_event,
+        get_admin_audit_events_fn=get_admin_audit_events,
         delete_user_fn=delete_user,
         get_recent_audit_log_fn=get_recent_audit_log,
     )

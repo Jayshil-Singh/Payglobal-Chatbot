@@ -27,6 +27,8 @@ def render_admin_panel(
     reset_user_password_fn,
     set_user_active_fn,
     unlock_user_fn,
+    add_admin_audit_event_fn,
+    get_admin_audit_events_fn,
     delete_user_fn,
     get_recent_audit_log_fn,
 ) -> None:
@@ -128,6 +130,15 @@ def render_admin_panel(
                         sel = st.selectbox("Role", ["user", "admin"], index=0 if item["role"] == "user" else 1, key=f"rsel_{item['id']}", label_visibility="collapsed")
                         if sel != item["role"]:
                             update_user_role_fn(item["id"], sel)
+                            add_admin_audit_event_fn(
+                                actor_user_id=user["id"],
+                                actor_username=user["username"],
+                                action="user.role_changed",
+                                target_type="user",
+                                target_id=str(item["id"]),
+                                target_label=item["username"],
+                                metadata={"new_role": sel, "old_role": item["role"]},
+                            )
                             st.toast(f"✅ {item['username']} → {sel}")
                             st.rerun()
                     else:
@@ -139,6 +150,14 @@ def render_admin_panel(
                         if st.button("🔑 Reset", key=f"rpw_{item['id']}", width="stretch"):
                             if new_pw and len(new_pw) >= PASSWORD_MIN_LENGTH:
                                 reset_user_password_fn(item["id"], hash_password(new_pw))
+                                add_admin_audit_event_fn(
+                                    actor_user_id=user["id"],
+                                    actor_username=user["username"],
+                                    action="user.password_reset",
+                                    target_type="user",
+                                    target_id=str(item["id"]),
+                                    target_label=item["username"],
+                                )
                                 st.toast(f"🔑 Password reset for {item['username']}")
                             else:
                                 st.warning(f"Min {PASSWORD_MIN_LENGTH} characters required.")
@@ -153,6 +172,15 @@ def render_admin_panel(
                             try:
                                 temp_password = generate_temp_password()
                                 set_new_password(item["id"], temp_password, True)
+                                add_admin_audit_event_fn(
+                                    actor_user_id=user["id"],
+                                    actor_username=user["username"],
+                                    action="user.temp_password_resent",
+                                    target_type="user",
+                                    target_id=str(item["id"]),
+                                    target_label=item["username"],
+                                    metadata={"email": item.get("email") or ""},
+                                )
                                 send_email(
                                     smtp_host=smtp_host,
                                     smtp_port=smtp_port,
@@ -178,17 +206,42 @@ def render_admin_panel(
                     if not is_me:
                         status = "Disable" if item.get("is_active", 1) else "Enable"
                         if st.button(status, key=f"toggle_active_{item['id']}", width="stretch"):
-                            set_user_active_fn(item["id"], not bool(item.get("is_active", 1)))
+                            new_state = not bool(item.get("is_active", 1))
+                            set_user_active_fn(item["id"], new_state)
+                            add_admin_audit_event_fn(
+                                actor_user_id=user["id"],
+                                actor_username=user["username"],
+                                action="user.disabled" if not new_state else "user.enabled",
+                                target_type="user",
+                                target_id=str(item["id"]),
+                                target_label=item["username"],
+                            )
                             st.toast(f"✅ Account updated: {item['username']}")
                             st.rerun()
                         if st.button("Unlock", key=f"unlock_{item['id']}", width="stretch"):
                             unlock_user_fn(item["id"])
+                            add_admin_audit_event_fn(
+                                actor_user_id=user["id"],
+                                actor_username=user["username"],
+                                action="user.unlocked",
+                                target_type="user",
+                                target_id=str(item["id"]),
+                                target_label=item["username"],
+                            )
                             st.toast(f"🔓 Unlocked {item['username']}")
                             st.rerun()
 
                 with c7:
                     if not is_me and st.button("🗑️", key=f"delu_{item['id']}", help=f"Delete {item['username']}"):
                         delete_user_fn(item["id"])
+                        add_admin_audit_event_fn(
+                            actor_user_id=user["id"],
+                            actor_username=user["username"],
+                            action="user.deleted",
+                            target_type="user",
+                            target_id=str(item["id"]),
+                            target_label=item["username"],
+                        )
                         st.toast(f"🗑️ Deleted {item['username']}")
                         st.rerun()
             status_text = "Active" if item.get("is_active", 1) else "Disabled"
@@ -212,6 +265,15 @@ def render_admin_panel(
                         temp_password = generate_temp_password()
                         created_user = auth_register(nu_user, temp_password, nu_email, nu_role)
                         set_new_password(created_user["id"], temp_password, True)
+                        add_admin_audit_event_fn(
+                            actor_user_id=user["id"],
+                            actor_username=user["username"],
+                            action="user.created",
+                            target_type="user",
+                            target_id=str(created_user["id"]),
+                            target_label=created_user["username"],
+                            metadata={"role": nu_role, "email": nu_email.strip().lower()},
+                        )
 
                         if smtp_user and smtp_password:
                             send_email(
@@ -358,6 +420,22 @@ def render_admin_panel(
     with tabs[5]:
         import pandas as pd
 
+        st.markdown("#### 🛡️ Admin Actions (Audit)")
+        events = get_admin_audit_events_fn(200)
+        if not events:
+            st.caption("No admin actions recorded yet.")
+        else:
+            edf = pd.DataFrame(events)
+            for col in ["created_at", "actor_username", "action", "target_type", "target_label", "metadata_json"]:
+                if col not in edf.columns:
+                    edf[col] = ""
+            edf = edf[["created_at", "actor_username", "action", "target_type", "target_label", "metadata_json"]]
+            edf.columns = ["Timestamp", "Actor", "Action", "Target Type", "Target", "Metadata"]
+            edf["Timestamp"] = edf["Timestamp"].astype(str).str[:19]
+            edf.index = edf.index + 1
+            st.dataframe(edf, width="stretch", height=260)
+
+        st.divider()
         st.markdown("#### 📋 Recent User Queries")
         logs = get_recent_audit_log_fn(100)
         if not logs:

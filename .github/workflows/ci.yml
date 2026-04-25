@@ -36,3 +36,14 @@ jobs:
 
       - name: Run tests
         run: pytest -q -p no:cacheprovider
+
+      - name: E2E smoke (Playwright) — optional
+        if: ${{ env.E2E_BASE_URL != '' }}
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+          python scripts/e2e_smoke_playwright.py

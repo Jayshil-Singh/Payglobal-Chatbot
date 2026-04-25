@@ -6,6 +6,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from config import DB_PATH
 from utils.logger import get_logger
@@ -86,6 +87,19 @@ def init_db():
                 user_id    INTEGER NOT NULL,
                 expires_at TIMESTAMP NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS admin_audit_events (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                actor_user_id  INTEGER,
+                actor_username TEXT,
+                action         TEXT NOT NULL,
+                target_type    TEXT,
+                target_id      TEXT,
+                target_label   TEXT,
+                metadata_json  TEXT,
+                ip             TEXT,
+                created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             DELETE FROM feedback
@@ -470,6 +484,62 @@ def set_user_active(user_id: int, is_active: bool) -> None:
 def unlock_user(user_id: int) -> None:
     """Manually clear lockout counters for a user account."""
     clear_failed_login_state(user_id)
+
+
+# ── Admin Audit Events ──────────────────────────────────────────────────────
+
+
+def add_admin_audit_event(
+    *,
+    actor_user_id: int | None,
+    actor_username: str,
+    action: str,
+    target_type: str = "",
+    target_id: str = "",
+    target_label: str = "",
+    metadata: dict[str, Any] | None = None,
+    ip: str = "",
+) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO admin_audit_events
+            (actor_user_id, actor_username, action, target_type, target_id, target_label, metadata_json, ip)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                actor_user_id,
+                (actor_username or "").strip().lower(),
+                action,
+                target_type,
+                str(target_id) if target_id is not None else "",
+                target_label,
+                json.dumps(metadata or {}, ensure_ascii=False),
+                ip,
+            ),
+        )
+
+
+def get_admin_audit_events(limit: int = 200) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM admin_audit_events
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        out: list[dict] = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["metadata"] = json.loads(d.get("metadata_json") or "{}")
+            except Exception:
+                d["metadata"] = {}
+            out.append(d)
+        return out
 
 
 def get_recent_audit_log(limit: int = 100) -> list[dict]:
