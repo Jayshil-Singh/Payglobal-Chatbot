@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,11 +42,7 @@ jobs:
         run: pytest -q -p no:cacheprovider
 
       - name: E2E smoke (Playwright) — optional
-        if: ${{ secrets.E2E_BASE_URL != '' }}
-        env:
-          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
-          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        if: ${{ env.E2E_BASE_URL != '' }}
         run: |
           python -m pip install playwright
           python -m playwright install --with-deps chromium
