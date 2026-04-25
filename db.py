@@ -2,11 +2,11 @@
 SQLite database layer.
 Tables: users, conversations, messages, feedback
 """
-import sqlite3
 import json
+import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, Any
+
 from config import DB_PATH
 from utils.logger import get_logger
 
@@ -43,6 +43,9 @@ def init_db():
                 email         TEXT,
                 role          TEXT DEFAULT 'user',
                 must_change_password INTEGER DEFAULT 0,
+                is_active     INTEGER DEFAULT 1,
+                failed_login_attempts INTEGER DEFAULT 0,
+                locked_until  TIMESTAMP,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login    TIMESTAMP
             );
@@ -98,6 +101,14 @@ def init_db():
         cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
         if "must_change_password" not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
+        if "is_active" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
+            conn.execute("UPDATE users SET is_active = 1 WHERE is_active IS NULL")
+        if "failed_login_attempts" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0")
+            conn.execute("UPDATE users SET failed_login_attempts = 0 WHERE failed_login_attempts IS NULL")
+        if "locked_until" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP")
     log.info("Database initialized.")
 
 
@@ -112,7 +123,7 @@ def create_session(user_id: int, token: str, hours: int = 72) -> None:
         )
 
 
-def get_session_user(token: str) -> Optional[Dict]:
+def get_session_user(token: str) -> dict | None:
     """Return the user dict if the session token is valid & not expired, else None."""
     with get_conn() as conn:
         row = conn.execute(
@@ -140,7 +151,7 @@ def create_user(username: str, password_hash: str, email: str = "", role: str = 
         return cur.lastrowid
 
 
-def get_user(username: str) -> Optional[Dict]:
+def get_user(username: str) -> dict | None:
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
         return dict(row) if row else None
@@ -165,7 +176,7 @@ def create_conversation(user_id: int, title: str = "New Chat", module: str = "Al
         return cur.lastrowid
 
 
-def get_user_conversations(user_id: int) -> List[Dict]:
+def get_user_conversations(user_id: int) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC",
@@ -174,7 +185,7 @@ def get_user_conversations(user_id: int) -> List[Dict]:
         return [dict(r) for r in rows]
 
 
-def get_all_conversations_admin() -> List[Dict]:
+def get_all_conversations_admin() -> list[dict]:
     """Admin-only: all conversations across all users, with username attached."""
     with get_conn() as conn:
         rows = conn.execute(
@@ -220,7 +231,7 @@ def save_message(conv_id: int, role: str, content: str, sources=None) -> int:
     return msg_id
 
 
-def get_messages(conv_id: int) -> List[Dict]:
+def get_messages(conv_id: int) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM messages WHERE conversation_id = ? ORDER BY timestamp ASC",
@@ -254,7 +265,7 @@ def save_feedback(message_id: int, user_id: int, rating: int, comment: str = "")
         )
 
 
-def get_feedback_stats() -> Dict:
+def get_feedback_stats() -> dict:
     """Return aggregate feedback stats for admin/analytics."""
     with get_conn() as conn:
         row = conn.execute(
@@ -289,16 +300,23 @@ def get_request_count_last_hour(user_id: int) -> int:
 
 # ── Admin / Analytics ──────────────────────────────────────────────────────
 
-def get_all_users() -> List[Dict]:
+def get_all_users() -> list[dict]:
     """Admin-only: return all registered users."""
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, username, email, role, created_at, last_login FROM users ORDER BY created_at DESC"
+            """
+            SELECT
+                id, username, email, role,
+                is_active, must_change_password, failed_login_attempts, locked_until,
+                created_at, last_login
+            FROM users
+            ORDER BY created_at DESC
+            """
         ).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_analytics_data() -> Dict:
+def get_analytics_data() -> dict:
     """Comprehensive analytics for the admin dashboard."""
     with get_conn() as conn:
         # Totals
@@ -407,7 +425,54 @@ def set_must_change_password(user_id: int, must_change_password: bool) -> None:
         )
 
 
-def get_recent_audit_log(limit: int = 100) -> List[Dict]:
+def record_failed_login_attempt(user_id: int, lock_until: str | None = None) -> None:
+    """Increment failed login attempts and optionally set lockout expiration."""
+    with get_conn() as conn:
+        if lock_until:
+            conn.execute(
+                """
+                UPDATE users
+                SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1,
+                    locked_until = ?
+                WHERE id = ?
+                """,
+                (lock_until, user_id),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE users
+                SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
+                WHERE id = ?
+                """,
+                (user_id,),
+            )
+
+
+def clear_failed_login_state(user_id: int) -> None:
+    """Reset lockout and failed login state after successful authentication."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?",
+            (user_id,),
+        )
+
+
+def set_user_active(user_id: int, is_active: bool) -> None:
+    """Enable or disable a user account."""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET is_active = ? WHERE id = ?",
+            (1 if is_active else 0, user_id),
+        )
+
+
+def unlock_user(user_id: int) -> None:
+    """Manually clear lockout counters for a user account."""
+    clear_failed_login_state(user_id)
+
+
+def get_recent_audit_log(limit: int = 100) -> list[dict]:
     """Return the most recent user messages across all conversations for audit."""
     with get_conn() as conn:
         rows = conn.execute(

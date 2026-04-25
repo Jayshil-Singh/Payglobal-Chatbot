@@ -2,19 +2,20 @@
 Text chunking: splits large documents into smaller, overlapping chunks
 with metadata preserved for source citation.
 """
-from typing import List
+
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from utils.logger import get_logger
 
 log = get_logger(__name__)
 
 
 def chunk_documents(
-    docs: List[Document],
+    docs: list[Document],
     chunk_size: int = 800,
     chunk_overlap: int = 150,
-) -> List[Document]:
+) -> list[Document]:
     """
     Split documents into overlapping chunks.
     Preserves source metadata from each parent document.

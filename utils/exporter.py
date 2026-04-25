@@ -4,7 +4,6 @@ Also exports individual AI answers as standalone PDFs.
 """
 import io
 from datetime import datetime
-from typing import List, Dict, Any
 
 
 def _clean_for_pdf(text: str) -> str:
@@ -18,19 +17,21 @@ def _clean_for_pdf(text: str) -> str:
     return text
 
 
-def export_to_pdf(messages: List[Dict], username: str, module: str) -> bytes:
+def export_to_pdf(messages: list[dict], username: str, module: str) -> bytes:
     """
     Generate a formatted PDF of the conversation.
     Returns raw bytes suitable for st.download_button.
     """
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
     from reportlab.lib.colors import HexColor
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle,
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
     )
-    from reportlab.lib import colors
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -98,16 +99,16 @@ def export_to_pdf(messages: List[Dict], username: str, module: str) -> bytes:
     return buffer.getvalue()
 
 
-def export_to_docx(messages: List[Dict], username: str, module: str) -> bytes:
+def export_to_docx(messages: list[dict], username: str, module: str) -> bytes:
     """
     Generate a formatted Word document of the conversation.
     Returns raw bytes suitable for st.download_button.
     """
     from docx import Document
-    from docx.shared import Pt, RGBColor, Inches, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Cm, Pt, RGBColor
 
     doc = Document()
 
@@ -205,12 +206,15 @@ def export_answer_pdf(answer: str, sources: list, username: str) -> bytes:
     Generate a standalone PDF of a single AI answer (#10).
     Returns raw bytes suitable for st.download_button.
     """
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
     from reportlab.lib.colors import HexColor
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
     )
 
     buffer = io.BytesIO()

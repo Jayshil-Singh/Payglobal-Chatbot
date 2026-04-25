@@ -1,0 +1,16 @@
+line-length = 120
+target-version = "py310"
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  "data",
+]
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[lint.isort]
+known-first-party = ["auth", "config", "db", "ingest", "rag_chain", "services", "ui", "utils"]

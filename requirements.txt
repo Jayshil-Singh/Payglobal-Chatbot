@@ -20,3 +20,9 @@ plotly>=5.22.0
 # Local embeddings (free, no API key) — downloads ~90 MB model on first run
 sentence-transformers>=2.7.0
 torchvision>=0.26.0
+
+# Quality and security tooling
+pytest>=8.2.0
+ruff>=0.6.0
+bandit>=1.7.9
+pip-audit>=2.7.0

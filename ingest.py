@@ -19,15 +19,18 @@ Called from app.py for single-file UI uploads via ingest_file().
 import json
 import sys
 from pathlib import Path
-from typing import List
 
 from config import (
-    RAW_DOCS_DIR, FAISS_INDEX_DIR, DATA_DIR,
-    EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP,
     ALLOW_DANGEROUS_DESERIALIZATION,
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    DATA_DIR,
+    EMBEDDING_MODEL,
+    FAISS_INDEX_DIR,
+    RAW_DOCS_DIR,
 )
-from utils.loader import load_pdfs, load_docx
 from utils.chunker import chunk_documents
+from utils.loader import load_docx, load_pdfs
 from utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -329,7 +332,7 @@ Examples:
         sys.exit(1)
 
     print(f"\n{'='*60}")
-    print(f"  PayGlobal Bulk Ingestion")
+    print("  PayGlobal Bulk Ingestion")
     print(f"  Folder     : {folder}")
     print(f"  Force      : {args.force}")
     print(f"  Batch size : {args.batch_size} chunks")
@@ -343,7 +346,7 @@ Examples:
     )
 
     print(f"\n{'='*60}")
-    print(f"  INGESTION COMPLETE")
+    print("  INGESTION COMPLETE")
     print(f"  Total files  : {stats['total']}")
     print(f"  Ingested     : {stats['ingested']}")
     print(f"  Skipped      : {stats['skipped']} (already done)")

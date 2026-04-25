@@ -3,14 +3,15 @@ Document loaders: PDF, DOCX, and web URLs.
 Returns a flat list of LangChain Document objects.
 """
 from pathlib import Path
-from typing import List
+
 from langchain_core.documents import Document
+
 from utils.logger import get_logger
 
 log = get_logger(__name__)
 
 
-def load_pdfs(folder: Path) -> List[Document]:
+def load_pdfs(folder: Path) -> list[Document]:
     """Load all PDFs from a directory using pypdf."""
     from langchain_community.document_loaders import PyMuPDFLoader
     docs = []
@@ -31,7 +32,7 @@ def load_pdfs(folder: Path) -> List[Document]:
     return docs
 
 
-def load_docx(folder: Path) -> List[Document]:
+def load_docx(folder: Path) -> list[Document]:
     """Load all DOCX files from a directory."""
     from langchain_community.document_loaders import Docx2txtLoader
     docs = []
@@ -51,7 +52,7 @@ def load_docx(folder: Path) -> List[Document]:
     return docs
 
 
-def load_urls(urls: List[str]) -> List[Document]:
+def load_urls(urls: list[str]) -> list[Document]:
     """Load content from a list of web URLs."""
     from langchain_community.document_loaders import WebBaseLoader
     docs = []
@@ -69,7 +70,7 @@ def load_urls(urls: List[str]) -> List[Document]:
     return docs
 
 
-def load_all(folder: Path, urls: List[str] = None) -> List[Document]:
+def load_all(folder: Path, urls: list[str] = None) -> list[Document]:
     """Load PDFs, DOCX, and optional URLs from a folder."""
     docs = []
     docs.extend(load_pdfs(folder))

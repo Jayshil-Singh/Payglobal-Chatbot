@@ -31,6 +31,8 @@ py -3 scripts/reset_admin_password.py --username admin --password "NewStrongPass
 - Default hardcoded admin password has been removed.
 - Feedback writes enforce a single vote per user per answer.
 - Runtime artifacts are git-ignored (`data/logs`, ingest manifest).
+- Failed login lockout is enabled (`MAX_FAILED_LOGIN_ATTEMPTS`, `LOGIN_LOCKOUT_MINUTES`).
+- Admin can disable/enable accounts and unlock locked users.
 
 ## Production Guidance
 
@@ -47,11 +49,7 @@ py -3 scripts/reset_admin_password.py --username admin --password "NewStrongPass
   - `py -3 -m pip install pytest python-dotenv bcrypt`
   - `py -3 -m pytest -q -p no:cacheprovider`
 
-## Suggested Next Refactor
+## Operations and Security Docs
 
-- Split `app.py` into:
-  - `ui/auth_view.py`
-  - `ui/chat_view.py`
-  - `ui/admin_view.py`
-  - `services/chat_service.py`
-  - `services/security.py`
+- Security policy: `SECURITY.md`
+- Ops runbook: `RUNBOOK.md`

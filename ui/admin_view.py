@@ -1,12 +1,13 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
 
-from auth import generate_temp_password, hash_password, register as auth_register, set_new_password
-from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
-from ingest import ingest_file, index_exists
+from auth import generate_temp_password, hash_password, set_new_password
+from auth import register as auth_register
+from config import GROK_BASE_URL, GROK_MODEL, PASSWORD_MIN_LENGTH, SYSTEM_PROMPT_PATH
+from ingest import index_exists, ingest_file
 from utils.mailer import send_email
 
 
@@ -24,6 +25,8 @@ def render_admin_panel(
     get_all_users_fn,
     update_user_role_fn,
     reset_user_password_fn,
+    set_user_active_fn,
+    unlock_user_fn,
     delete_user_fn,
     get_recent_audit_log_fn,
 ) -> None:
@@ -115,7 +118,7 @@ def render_admin_panel(
         for item in all_users:
             is_me = item["id"] == user["id"]
             with st.container():
-                c1, c2, c3, c4, c5, c6 = st.columns([2.2, 2.4, 1.4, 2.6, 1.5, 0.8])
+                c1, c2, c3, c4, c5, c6, c7 = st.columns([2.0, 2.2, 1.2, 2.2, 1.4, 1.4, 0.7])
                 badge = "🔵" if item["role"] == "admin" else "⚪"
                 c1.markdown(f"{badge} **{item['username']}** {'*(you)*' if is_me else ''}")
                 c2.markdown(f"`{item.get('email') or '—'}`")
@@ -134,11 +137,11 @@ def render_admin_panel(
                     if not is_me:
                         new_pw = st.text_input("New password", key=f"npw_{item['id']}", placeholder="New password…", type="password", label_visibility="collapsed")
                         if st.button("🔑 Reset", key=f"rpw_{item['id']}", width="stretch"):
-                            if new_pw and len(new_pw) >= 6:
+                            if new_pw and len(new_pw) >= PASSWORD_MIN_LENGTH:
                                 reset_user_password_fn(item["id"], hash_password(new_pw))
                                 st.toast(f"🔑 Password reset for {item['username']}")
                             else:
-                                st.warning("Min 6 characters required.")
+                                st.warning(f"Min {PASSWORD_MIN_LENGTH} characters required.")
 
                 with c5:
                     if not is_me and st.button("Resend Temp Password", key=f"temp_{item['id']}", help=f"Send temporary password to {item['username']}", width="stretch"):
@@ -172,10 +175,26 @@ def render_admin_panel(
                                 st.error(f"Failed to send temp password: {exc}")
 
                 with c6:
+                    if not is_me:
+                        status = "Disable" if item.get("is_active", 1) else "Enable"
+                        if st.button(status, key=f"toggle_active_{item['id']}", width="stretch"):
+                            set_user_active_fn(item["id"], not bool(item.get("is_active", 1)))
+                            st.toast(f"✅ Account updated: {item['username']}")
+                            st.rerun()
+                        if st.button("Unlock", key=f"unlock_{item['id']}", width="stretch"):
+                            unlock_user_fn(item["id"])
+                            st.toast(f"🔓 Unlocked {item['username']}")
+                            st.rerun()
+
+                with c7:
                     if not is_me and st.button("🗑️", key=f"delu_{item['id']}", help=f"Delete {item['username']}"):
                         delete_user_fn(item["id"])
                         st.toast(f"🗑️ Deleted {item['username']}")
                         st.rerun()
+            status_text = "Active" if item.get("is_active", 1) else "Disabled"
+            lock_text = item.get("locked_until") or "Not locked"
+            attempts = int(item.get("failed_login_attempts") or 0)
+            st.caption(f"Status: {status_text} · Failed attempts: {attempts} · Locked until: {lock_text}")
             st.divider()
 
         st.markdown("#### ➕ Create New User")

@@ -7,8 +7,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from auth import hash_password
-from db import create_user, get_conn, get_user, init_db
+from auth import hash_password  # noqa: E402
+from db import create_user, get_conn, get_user, init_db  # noqa: E402
 
 
 def upsert_admin(username: str, password: str, email: str) -> None:

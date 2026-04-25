@@ -113,6 +113,7 @@ def render_sidebar(
                     with st.spinner("Testing…"):
                         try:
                             import requests as _rq
+
                             from config import GROK_BASE_URL
 
                             response = _rq.post(

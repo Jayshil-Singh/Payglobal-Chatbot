@@ -9,12 +9,19 @@ Robustness features:
   (#3 feedback is handled in app.py / db.py)
 """
 import time
-from typing import List, Tuple, Dict, Any, Optional
+from typing import Any
 
 from config import (
-    FAISS_INDEX_DIR, GROK_API_KEY, GROK_BASE_URL, GROK_MODEL,
-    EMBEDDING_MODEL, RETRIEVER_K, MEMORY_WINDOW, SYSTEM_PROMPT_PATH,
-    ALLOW_DANGEROUS_DESERIALIZATION, ENABLE_RERANKER,
+    ALLOW_DANGEROUS_DESERIALIZATION,
+    EMBEDDING_MODEL,
+    ENABLE_RERANKER,
+    FAISS_INDEX_DIR,
+    GROK_API_KEY,
+    GROK_BASE_URL,
+    GROK_MODEL,
+    MEMORY_WINDOW,
+    RETRIEVER_K,
+    SYSTEM_PROMPT_PATH,
 )
 from ingest import index_exists
 from utils.logger import get_logger
@@ -72,8 +79,8 @@ def _multi_query_retrieve(vectorstore, question: str, llm, k: int = RETRIEVER_K)
     Rewrite the question 3 different ways, retrieve from each,
     deduplicate by page_content hash, return merged unique docs.
     """
-    from langchain_core.prompts import PromptTemplate
     from langchain_core.output_parsers import StrOutputParser
+    from langchain_core.prompts import PromptTemplate
 
     rewrite_prompt = PromptTemplate(
         input_variables=["question"],
@@ -133,7 +140,7 @@ _IDK_RESPONSE = (
 
 # ── #4 Page-number citations ──────────────────────────────────────────────────
 
-def _extract_sources(docs: list) -> List[Dict]:
+def _extract_sources(docs: list) -> list[dict]:
     """
     Return list of {file, page} dicts from retrieved source documents.
     Deduplicates by (file, page) pair.
@@ -178,7 +185,7 @@ def _rerank_docs(question: str, docs: list, top_k: int = RETRIEVER_K) -> list:
             )
         pairs  = [(question, d.page_content[:400]) for d in docs]
         scores = _reranker_model.predict(pairs)
-        ranked = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
+        ranked = sorted(zip(scores, docs, strict=False), key=lambda x: x[0], reverse=True)
         result = [d for _, d in ranked[:top_k]]
         log.info(f"Re-ranker: {len(docs)} chunks -> kept top {len(result)}")
         return result
@@ -192,12 +199,12 @@ def _rerank_docs(question: str, docs: list, top_k: int = RETRIEVER_K) -> list:
 def get_rag_chain(
     api_key: str = None,
     model: str = None,
-    chat_history: List[Tuple[str, str]] = None,
+    chat_history: list[tuple[str, str]] = None,
 ):
-    from langchain_openai import ChatOpenAI
-    from langchain_community.vectorstores import FAISS
-    from langchain_classic.memory import ConversationBufferWindowMemory
     from langchain_classic.chains import ConversationalRetrievalChain
+    from langchain_classic.memory import ConversationBufferWindowMemory
+    from langchain_community.vectorstores import FAISS
+    from langchain_openai import ChatOpenAI
 
     key = api_key or GROK_API_KEY
     mdl = model   or GROK_MODEL
@@ -248,7 +255,7 @@ def get_rag_chain(
 
 # ── #1 Ask with retry + #2 IDK + #3 multi-query + #4 page cites ─────────────
 
-def ask(chain, question: str) -> Dict[str, Any]:
+def ask(chain, question: str) -> dict[str, Any]:
     """
     Ask a question with:
       - Multi-query retrieval (#3)
@@ -291,7 +298,6 @@ def ask(chain, question: str) -> Dict[str, Any]:
         }
 
     # ── #1 Retry with exponential backoff ─────────────────────────────────
-    last_error  = None
     error_type  = "api_error"   # default; may be overridden below
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -312,7 +318,6 @@ def ask(chain, question: str) -> Dict[str, Any]:
             }
 
         except Exception as e:
-            last_error  = e
             err_str     = str(e)
 
             # ── Detect non-retryable errors ───────────────────────────────

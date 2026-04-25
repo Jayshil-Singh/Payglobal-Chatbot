@@ -1,0 +1,11 @@
+exclude_dirs:
+  - .venv
+  - venv
+  - tests
+  - data
+
+skips:
+  # B101: assert statements are allowed in test/dev scripts.
+  - B101
+  # B110: UI code uses try/except pass for non-critical rendering fallbacks.
+  - B110

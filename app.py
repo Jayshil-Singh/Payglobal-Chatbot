@@ -30,14 +30,24 @@ from db import (
     get_user_conversations,
     reset_user_password,
     save_feedback,
+    set_user_active,
+    unlock_user,
     update_user_role,
 )
 from ingest import ingest_file
 from services.chat_service import (
     auto_title as auto_title_service,
+)
+from services.chat_service import (
     handle_message as handle_message_service,
+)
+from services.chat_service import (
     load_chain as load_chain_service,
+)
+from services.chat_service import (
     load_conversation as load_conversation_service,
+)
+from services.chat_service import (
     start_new_conversation as start_new_conversation_service,
 )
 from services.state import init_state as init_app_state
@@ -48,7 +58,6 @@ from ui.chat_view import render_chat
 from ui.sidebar_view import render_sidebar
 from ui.theme import apply_theme as apply_enterprise_theme
 from utils.exporter import export_answer_pdf, export_to_docx, export_to_pdf
-
 
 st.set_page_config(
     page_title="PayGlobal AI Assistant",
@@ -135,6 +144,8 @@ def show_admin_panel() -> None:
         get_all_users_fn=get_all_users,
         update_user_role_fn=update_user_role,
         reset_user_password_fn=reset_user_password,
+        set_user_active_fn=set_user_active,
+        unlock_user_fn=unlock_user,
         delete_user_fn=delete_user,
         get_recent_audit_log_fn=get_recent_audit_log,
     )

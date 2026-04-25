@@ -6,3 +6,8 @@
 [ 6053750ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
 [ 6103525ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:8502/_stcore/health:0
 [ 8243286ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
+[ 9358799ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
+[12275496ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
+[33385199ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:8502/_stcore/health:0
+[33385216ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:8502/_stcore/host-config:0
+[64408100ms] [WARNING] WebSocket connection to 'ws://localhost:8502/_stcore/stream' failed: WebSocket is closed before the connection is established. @ http://localhost:8502/static/js/index.RuhrnD1v.js:136

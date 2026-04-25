@@ -4,9 +4,9 @@ from config import RATE_LIMIT_PER_HOUR
 from db import (
     create_conversation,
     get_messages,
+    get_request_count_last_hour,
     save_message,
     update_conversation_title,
-    get_request_count_last_hour,
 )
 from ingest import index_exists
 from rag_chain import ask, get_rag_chain

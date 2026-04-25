@@ -13,6 +13,7 @@ def render_chat(*, app_title: str, save_feedback_fn, export_answer_pdf_fn, start
         if st.session_state.get("_last_status_check") != st.session_state.api_key[:8]:
             try:
                 import requests as _rq
+
                 from config import GROK_BASE_URL, GROK_MODEL
 
                 r = _rq.post(

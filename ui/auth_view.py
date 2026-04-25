@@ -1,5 +1,7 @@
 import streamlit as st
 
+from config import PASSWORD_MIN_LENGTH
+
 
 def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
     _, col, _ = st.columns([1, 1.6, 1])
@@ -54,7 +56,7 @@ def render_force_password_change(set_new_password_fn) -> None:
             unsafe_allow_html=True,
         )
         with st.form("force_pw_change"):
-            new_pw = st.text_input("New Password", type="password", placeholder="At least 8 characters")
+            new_pw = st.text_input("New Password", type="password", placeholder=f"At least {PASSWORD_MIN_LENGTH} characters")
             confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
             submitted = st.form_submit_button("Update Password", width="stretch", type="primary")
 
@@ -65,8 +67,8 @@ def render_force_password_change(set_new_password_fn) -> None:
             if new_pw != confirm_pw:
                 st.error("Passwords do not match.")
                 return
-            if len(new_pw) < 8:
-                st.error("Password must be at least 8 characters.")
+            if len(new_pw) < PASSWORD_MIN_LENGTH:
+                st.error(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
                 return
             set_new_password_fn(st.session_state.user["id"], new_pw, False)
             st.session_state.user["must_change_password"] = 0
