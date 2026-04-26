@@ -180,6 +180,15 @@ def get_user(username: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_user_by_email(email: str) -> dict | None:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE lower(email) = ?", (email,)).fetchone()
+        return dict(row) if row else None
+
+
 def update_last_login(user_id: int):
     with get_conn() as conn:
         conn.execute(
@@ -233,6 +242,27 @@ def update_conversation_title(conv_id: int, title: str):
 def delete_conversation(conv_id: int):
     with get_conn() as conn:
         conn.execute("DELETE FROM conversations WHERE id = ?", (conv_id,))
+
+
+def purge_data_older_than(days: int) -> dict:
+    """Delete messages/conversations older than N days (SQLite timestamp)."""
+    days = int(days)
+    if days <= 0:
+        return {"deleted_messages": 0, "deleted_conversations": 0}
+    with get_conn() as conn:
+        # Messages first (safe), then orphaned/old conversations.
+        cur1 = conn.execute(
+            "DELETE FROM messages WHERE timestamp < DATETIME('now', ?)",
+            (f"-{days} days",),
+        )
+        cur2 = conn.execute(
+            "DELETE FROM conversations WHERE updated_at < DATETIME('now', ?)",
+            (f"-{days} days",),
+        )
+        return {
+            "deleted_messages": cur1.rowcount if cur1.rowcount is not None else 0,
+            "deleted_conversations": cur2.rowcount if cur2.rowcount is not None else 0,
+        }
 
 
 # ── Messages ───────────────────────────────────────────────────────────────

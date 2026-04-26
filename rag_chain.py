@@ -13,13 +13,19 @@ from typing import Any
 
 from config import (
     ALLOW_DANGEROUS_DESERIALIZATION,
+    CIRCUIT_BREAKER_COOLDOWN_SECONDS,
+    CIRCUIT_BREAKER_FAILURES,
     EMBEDDING_MODEL,
+    ENABLE_HYBRID_SEARCH,
     ENABLE_RERANKER,
+    ENABLE_VERIFICATION_PASS,
     FAISS_INDEX_DIR,
     GROK_API_KEY,
     GROK_BASE_URL,
     GROK_MODEL,
+    HYBRID_BM25_WEIGHT,
     MEMORY_WINDOW,
+    REQUIRE_CITATIONS,
     RETRIEVER_K,
     SYSTEM_PROMPT_PATH,
 )
@@ -36,6 +42,10 @@ MIN_CONTEXT_CHARS = 100
 # Retry config
 MAX_RETRIES   = 3
 RETRY_BACKOFF = 2   # seconds (doubles each attempt)
+
+# Circuit breaker state (module-level, process-wide)
+_cb_failures = 0
+_cb_open_until = 0.0
 
 # Error strings that signal a non-retryable failure (billing / auth)
 _NO_RETRY_PHRASES = [
@@ -118,6 +128,156 @@ def _multi_query_retrieve(vectorstore, question: str, llm, k: int = RETRIEVER_K)
 
     log.info(f"Multi-query: {len(all_queries)} queries -> {len(results)} unique chunks")
     return results[:k * 2]   # cap total
+
+
+def _build_bm25(vectorstore) -> tuple[list, Any] | tuple[None, None]:
+    """
+    Build a BM25 index over the FAISS docstore texts.
+    Cached on the chain instance.
+    """
+    try:
+        from rank_bm25 import BM25Okapi
+
+        docs = list(vectorstore.docstore._dict.values())
+        corpus_tokens = [(d.page_content or "").lower().split() for d in docs]
+        bm25 = BM25Okapi(corpus_tokens)
+        return docs, bm25
+    except Exception:
+        return None, None
+
+
+def _bm25_search(chain, query: str, top_k: int) -> list:
+    vs = getattr(chain, "_vectorstore", None)
+    if not vs:
+        return []
+    if getattr(chain, "_bm25", None) is None or getattr(chain, "_bm25_docs", None) is None:
+        docs, bm25 = _build_bm25(vs)
+        chain._bm25_docs = docs
+        chain._bm25 = bm25
+    bm25 = getattr(chain, "_bm25", None)
+    docs = getattr(chain, "_bm25_docs", None)
+    if not bm25 or not docs:
+        return []
+    try:
+        scores = bm25.get_scores(query.lower().split())
+        idxs = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+        return [docs[i] for i in idxs if scores[i] > 0]
+    except Exception:
+        return []
+
+
+def _apply_metadata_filter(docs: list, module_filter: str | None) -> list:
+    if not module_filter or module_filter == "All Modules":
+        return docs
+    wanted = module_filter.strip().lower()
+    out = []
+    for d in docs:
+        m = (d.metadata or {}).get("module") or ""
+        if str(m).strip().lower() == wanted:
+            out.append(d)
+    return out
+
+
+def _apply_extra_filters(docs: list, year: str, version: str, customer: str) -> list:
+    year = (year or "").strip().lower()
+    version = (version or "").strip().lower()
+    customer = (customer or "").strip().lower()
+    if not (year or version or customer):
+        return docs
+    out = []
+    for d in docs:
+        meta = d.metadata or {}
+        y = str(meta.get("year") or "").strip().lower()
+        v = str(meta.get("version") or "").strip().lower()
+        c = str(meta.get("customer") or "").strip().lower()
+        if year and year not in y:
+            continue
+        if version and version not in v:
+            continue
+        if customer and customer not in c:
+            continue
+        out.append(d)
+    return out
+
+
+def _rrf_fuse(vec_docs: list, bm_docs: list, weight_bm25: float, k: int = 60) -> tuple[list, dict]:
+    """
+    Weighted Reciprocal Rank Fusion.
+    score(doc) = (1-w)*1/(k+rank_vec) + w*1/(k+rank_bm25)
+    """
+    w = min(1.0, max(0.0, float(weight_bm25)))
+    scores: dict[int, float] = {}
+    seen_docs: dict[int, Any] = {}
+
+    def _add(docs: list, base_weight: float):
+        for idx, d in enumerate(docs):
+            key = hash((d.page_content or "")[:300])
+            seen_docs[key] = d
+            scores[key] = scores.get(key, 0.0) + base_weight * (1.0 / (k + idx + 1))
+
+    _add(vec_docs, 1.0 - w)
+    _add(bm_docs, w)
+
+    merged = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    fused = [seen_docs[key] for key, _ in merged]
+    stats = {
+        "vec": len(vec_docs),
+        "bm25": len(bm_docs),
+        "fused": len(fused),
+        "weight_bm25": w,
+    }
+    return fused, stats
+
+
+def _log_retrieval(docs: list, label: str) -> None:
+    try:
+        top = []
+        for d in docs[: min(8, len(docs))]:
+            meta = d.metadata or {}
+            top.append(
+                {
+                    "file": meta.get("source_file", "Unknown"),
+                    "page": meta.get("page"),
+                    "module": meta.get("module", ""),
+                    "section": meta.get("section", ""),
+                    "chars": len(d.page_content or ""),
+                }
+            )
+        log.info(f"{label}: retrieved={len(docs)} top={top}")
+    except Exception:
+        pass
+
+
+def _verification_pass(llm, question: str, answer: str, sources: list[dict]) -> str:
+    """
+    Optional post-check to reduce hallucinations:
+    - ensure the answer is consistent with sources
+    - ensure citations exist if required
+    """
+    try:
+        from langchain_core.output_parsers import StrOutputParser
+        from langchain_core.prompts import PromptTemplate
+
+        prompt = PromptTemplate(
+            input_variables=["question", "answer", "sources"],
+            template=(
+                "You are a strict enterprise QA reviewer.\n"
+                "Check the assistant answer for correctness and grounding.\n\n"
+                "Question:\n{question}\n\n"
+                "Answer:\n{answer}\n\n"
+                "Sources (file/page pairs):\n{sources}\n\n"
+                "Rules:\n"
+                "- If the answer makes a claim not supported by sources, rewrite the answer to be conservative.\n"
+                "- Keep it concise and professional.\n"
+                "- If sources are empty, respond with: I don't have enough information in the loaded PayGlobal documentation to answer this accurately.\n\n"
+                "Revised answer:"
+            ),
+        )
+        chain = prompt | llm | StrOutputParser()
+        revised = chain.invoke({"question": question, "answer": answer, "sources": str(sources)[:1500]})
+        return (revised or "").strip() or answer
+    except Exception:
+        return answer
 
 
 # ── #2 "I don't know" detection ──────────────────────────────────────────────
@@ -248,6 +408,8 @@ def get_rag_chain(
     # Attach vectorstore + llm for multi-query access
     chain._vectorstore = vectorstore
     chain._llm         = llm
+    chain._bm25_docs = None
+    chain._bm25 = None
 
     log.info(f"RAG chain ready — {mdl} @ {GROK_BASE_URL}")
     return chain
@@ -270,6 +432,17 @@ def ask(chain, question: str) -> dict[str, Any]:
         "retries": int,
       }
     """
+    global _cb_failures, _cb_open_until
+    now_ts = time.time()
+    if _cb_open_until and now_ts < _cb_open_until:
+        return {
+            "answer": "⚠️ The AI service is temporarily unavailable. Please try again in a minute.",
+            "sources": [],
+            "retries": 0,
+            "idk": False,
+            "error_type": "circuit_open",
+        }
+
     # ── #7 Query preprocessing ────────────────────────────────────────────
     processed_question = preprocess_query(question)
     if processed_question != question:
@@ -279,10 +452,35 @@ def ask(chain, question: str) -> dict[str, Any]:
     vs  = getattr(chain, "_vectorstore", None)
     llm = getattr(chain, "_llm", None)
 
+    t0 = time.time()
     if vs and llm:
-        src_docs = _multi_query_retrieve(vs, processed_question, llm)
+        vec_docs = _multi_query_retrieve(vs, processed_question, llm)
     else:
-        src_docs = chain.retriever.get_relevant_documents(processed_question)
+        vec_docs = chain.retriever.get_relevant_documents(processed_question)
+
+    bm_docs = _bm25_search(chain, processed_question, RETRIEVER_K * 2) if (ENABLE_HYBRID_SEARCH and llm) else []
+    fused, hybrid_stats = _rrf_fuse(vec_docs, bm_docs, HYBRID_BM25_WEIGHT)
+
+    # Optional module filter (based on Streamlit module selection)
+    module_filter = None
+    filter_year = ""
+    filter_version = ""
+    filter_customer = ""
+    try:
+        import streamlit as st
+
+        module_filter = st.session_state.get("module")
+        filter_year = st.session_state.get("filter_year", "")
+        filter_version = st.session_state.get("filter_version", "")
+        filter_customer = st.session_state.get("filter_customer", "")
+    except Exception:
+        module_filter = None
+    src_docs = _apply_metadata_filter(fused, module_filter)
+    src_docs = _apply_extra_filters(src_docs, filter_year, filter_version, filter_customer)
+
+    retrieval_ms = int((time.time() - t0) * 1000)
+    log.info(f"Hybrid stats: {hybrid_stats} retrieval_ms={retrieval_ms}")
+    _log_retrieval(src_docs, "Retrieval")
 
     # ── #6 Re-ranking ─────────────────────────────────────────────────────
     src_docs = _rerank_docs(processed_question, src_docs)
@@ -308,7 +506,19 @@ def ask(chain, question: str) -> dict[str, Any]:
 
             # ── #4 Page-number citations ──────────────────────────────────
             sources = _extract_sources(raw_docs)
+            if REQUIRE_CITATIONS and not sources:
+                return {
+                    "answer": _IDK_RESPONSE,
+                    "sources": [],
+                    "retries": attempt - 1,
+                    "idk": True,
+                    "error_type": None,
+                }
 
+            if ENABLE_VERIFICATION_PASS and llm:
+                answer = _verification_pass(llm, question, answer, sources)
+
+            _cb_failures = 0
             return {
                 "answer":     answer,
                 "sources":    sources,
@@ -318,6 +528,9 @@ def ask(chain, question: str) -> dict[str, Any]:
             }
 
         except Exception as e:
+            _cb_failures += 1
+            if _cb_failures >= CIRCUIT_BREAKER_FAILURES:
+                _cb_open_until = time.time() + float(CIRCUIT_BREAKER_COOLDOWN_SECONDS)
             err_str     = str(e)
 
             # ── Detect non-retryable errors ───────────────────────────────

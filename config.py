@@ -63,6 +63,19 @@ ALLOW_DANGEROUS_DESERIALIZATION = os.getenv("ALLOW_DANGEROUS_DESERIALIZATION", "
 # Cloud-safe default: keep heavy cross-encoder reranker off unless explicitly enabled.
 ENABLE_RERANKER = os.getenv("ENABLE_RERANKER", "false").lower() == "true"
 
+# ── Retrieval robustness ───────────────────────────────────────────────────
+ENABLE_HYBRID_SEARCH = os.getenv("ENABLE_HYBRID_SEARCH", "true").lower() == "true"
+HYBRID_BM25_WEIGHT = float(os.getenv("HYBRID_BM25_WEIGHT", "0.35"))
+ENABLE_VERIFICATION_PASS = os.getenv("ENABLE_VERIFICATION_PASS", "false").lower() == "true"
+REQUIRE_CITATIONS = os.getenv("REQUIRE_CITATIONS", "true").lower() == "true"
+
+# Circuit breaker (LLM failures)
+CIRCUIT_BREAKER_FAILURES = int(os.getenv("CIRCUIT_BREAKER_FAILURES", "4"))
+CIRCUIT_BREAKER_COOLDOWN_SECONDS = int(os.getenv("CIRCUIT_BREAKER_COOLDOWN_SECONDS", "60"))
+
+# Data retention
+DATA_RETENTION_DAYS = int(os.getenv("DATA_RETENTION_DAYS", "180"))
+
 # ── Rate Limiting ──────────────────────────────────────────────────────────
 RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "50"))
 
@@ -71,6 +84,13 @@ PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "8"))
 MAX_FAILED_LOGIN_ATTEMPTS = int(os.getenv("MAX_FAILED_LOGIN_ATTEMPTS", "5"))
 LOGIN_LOCKOUT_MINUTES = int(os.getenv("LOGIN_LOCKOUT_MINUTES", "15"))
 SESSION_IDLE_TIMEOUT_MINUTES = int(os.getenv("SESSION_IDLE_TIMEOUT_MINUTES", "60"))
+
+# ── SSO (Trusted Header) ───────────────────────────────────────────────────
+# For enterprise SSO behind a reverse proxy (Azure AD / Cloudflare Access / Nginx auth_request):
+# - The proxy authenticates the user, then injects a header with the username/email.
+SSO_HEADER_USERNAME = os.getenv("SSO_HEADER_USERNAME", "").strip()  # e.g. "X-Auth-Request-Email"
+SSO_AUTO_PROVISION = os.getenv("SSO_AUTO_PROVISION", "true").lower() == "true"
+SSO_ADMIN_USERS = [u.strip().lower() for u in os.getenv("SSO_ADMIN_USERS", "").split(",") if u.strip()]
 
 # ── SMTP (new user onboarding emails) ──────────────────────────────────────
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")

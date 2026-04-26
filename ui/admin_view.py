@@ -6,7 +6,7 @@ import streamlit as st
 
 from auth import generate_temp_password, hash_password, set_new_password, validate_password_strength
 from auth import register as auth_register
-from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
+from config import DATA_RETENTION_DAYS, GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
 from ingest import index_exists, ingest_file
 from utils.mailer import send_email
 
@@ -31,6 +31,9 @@ def render_admin_panel(
     get_admin_audit_events_fn,
     delete_user_fn,
     get_recent_audit_log_fn,
+    purge_data_older_than_fn=None,
+    ingest_folder_fn=None,
+    raw_docs_dir=None,
 ) -> None:
     user = st.session_state.user
     is_dark = st.session_state.get("theme", "dark") == "dark"
@@ -113,6 +116,22 @@ def render_admin_panel(
                 unsafe_allow_html=True,
             )
         st.info(f"⏱️ Rate limit: **{rate_limit_per_hour} req/hr** per user. Admins are always exempt.")
+
+        if purge_data_older_than_fn:
+            st.divider()
+            st.markdown("#### 🧹 Data Retention")
+            days = st.number_input(
+                "Retention (days)",
+                min_value=7,
+                max_value=3650,
+                value=int(DATA_RETENTION_DAYS),
+                step=7,
+            )
+            if st.button("Purge old data now", type="primary", width="stretch"):
+                res = purge_data_older_than_fn(int(days))
+                st.success(
+                    f"Purged: {res.get('deleted_messages', 0)} messages, {res.get('deleted_conversations', 0)} conversations."
+                )
 
     with tabs[1]:
         import pandas as pd
@@ -419,6 +438,19 @@ def render_admin_panel(
                 st.success(f"✅ Re-indexed {len(files)} file(s) → {total_chunks} chunks")
             else:
                 st.warning("No files to ingest.")
+
+        st.divider()
+        st.markdown("#### 📥 Ingest RAW folder (incremental)")
+        st.caption("Ingests new/changed files in `data/raw/` using the manifest (no full re-index).")
+        if ingest_folder_fn and raw_docs_dir:
+            if st.button("Ingest new/changed raw docs", width="stretch", type="primary"):
+                with st.spinner("Ingesting raw docs…"):
+                    stats = ingest_folder_fn(folder=raw_docs_dir, force=False, batch_size=100, show_progress=False)
+                st.session_state.rag_chain = None
+                st.success(
+                    f"RAW ingest complete: ingested={stats.get('ingested')} skipped={stats.get('skipped')} "
+                    f"failed={stats.get('failed')} chunks={stats.get('chunks')}"
+                )
 
     with tabs[3]:
         st.markdown("#### 🤖 LLM & Rate Limit Configuration")

@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "notes": "Add 30-100 real PayGlobal questions with expected key sources/citations over time.",
+  "cases": [
+    {
+      "id": "smoke-1",
+      "question": "What is PayGlobal and what modules does it include?",
+      "expect": {
+        "citations": true,
+        "expected_files_any": []
+      }
+    }
+  ]
+}
+

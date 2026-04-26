@@ -1,13 +1,37 @@
 import streamlit as st
 
-from config import PASSWORD_MIN_LENGTH
-from db import update_user_network
-from utils.client_info import get_client_ip_and_location
+from auth import hash_password
+from config import PASSWORD_MIN_LENGTH, SSO_ADMIN_USERS, SSO_AUTO_PROVISION, SSO_HEADER_USERNAME
+from db import create_user, get_user, get_user_by_email, update_user_network
+from utils.client_info import get_client_ip_and_location, get_header_value
 
 
 def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
     _, col, _ = st.columns([1, 1.6, 1])
     with col:
+        # ── SSO (trusted header) auto-login ───────────────────────────────
+        if SSO_HEADER_USERNAME:
+            sso_value = get_header_value(SSO_HEADER_USERNAME)
+            if sso_value and not st.session_state.get("authenticated"):
+                sso_value = sso_value.strip().lower()
+                user = get_user(sso_value) or get_user_by_email(sso_value)
+                if not user and SSO_AUTO_PROVISION:
+                    role = "admin" if sso_value in SSO_ADMIN_USERS else "user"
+                    # Random local password hash; user won't use it under SSO.
+                    create_user(sso_value, hash_password("TempPass123!"), email=sso_value, role=role)
+                    user = get_user(sso_value) or get_user_by_email(sso_value)
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user = user
+                    st.session_state.api_key = default_api_key
+                    try:
+                        ip, loc = get_client_ip_and_location()
+                        if ip or loc:
+                            update_user_network(user["id"], ip, loc)
+                    except Exception:
+                        pass
+                    st.rerun()
+
         st.markdown(
             """
         <div style='text-align:center; margin-top:3rem; margin-bottom:2rem;'>

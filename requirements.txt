@@ -27,3 +27,4 @@ ruff>=0.6.0
 bandit>=1.7.9
 pip-audit>=2.7.0
 playwright>=1.46.0
+rank-bm25>=0.2.2

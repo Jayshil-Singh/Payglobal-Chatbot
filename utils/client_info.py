@@ -15,6 +15,17 @@ def _safe_headers() -> dict:
         return {}
 
 
+def get_header_value(name: str) -> str:
+    if not name:
+        return ""
+    h = _safe_headers()
+    # headers may come in various casings
+    for k, v in h.items():
+        if str(k).lower() == str(name).lower():
+            return str(v).strip()
+    return ""
+
+
 def get_client_ip() -> str:
     h = _safe_headers()
     # Common proxy/CDN headers (order matters: prefer "direct client" headers).

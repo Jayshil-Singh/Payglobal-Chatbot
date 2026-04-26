@@ -11,9 +11,11 @@ import streamlit as st
 from auth import bootstrap_admin, login, register, set_new_password
 from config import (
     APP_TITLE,
+    DATA_RETENTION_DAYS,
     GROK_API_KEY,
     PAYGLOBAL_MODULES,
     RATE_LIMIT_PER_HOUR,
+    RAW_DOCS_DIR,
     SENDGRID_API_KEY,
     SENDGRID_FROM_EMAIL,
     SESSION_IDLE_TIMEOUT_MINUTES,
@@ -33,13 +35,14 @@ from db import (
     get_analytics_data,
     get_recent_audit_log,
     get_user_conversations,
+    purge_data_older_than,
     reset_user_password,
     save_feedback,
     set_user_active,
     unlock_user,
     update_user_role,
 )
-from ingest import ingest_file
+from ingest import ingest_file, ingest_folder
 from services.chat_service import (
     auto_title as auto_title_service,
 )
@@ -75,6 +78,16 @@ st.set_page_config(
 bootstrap_admin()
 init_app_state(GROK_API_KEY)
 apply_enterprise_theme()
+
+# Daily retention purge (best-effort; avoids background schedulers on Streamlit Cloud)
+try:
+    now = time.time()
+    last = float(st.session_state.get("last_retention_purge_ts", 0.0))
+    if int(DATA_RETENTION_DAYS) > 0 and now - last > 24 * 3600:
+        purge_data_older_than(int(DATA_RETENTION_DAYS))
+        st.session_state.last_retention_purge_ts = now
+except Exception:
+    pass
 
 
 def enforce_idle_timeout() -> None:
@@ -174,6 +187,9 @@ def show_admin_panel() -> None:
         get_admin_audit_events_fn=get_admin_audit_events,
         delete_user_fn=delete_user,
         get_recent_audit_log_fn=get_recent_audit_log,
+        purge_data_older_than_fn=purge_data_older_than,
+        ingest_folder_fn=ingest_folder,
+        raw_docs_dir=RAW_DOCS_DIR,
     )
 
 

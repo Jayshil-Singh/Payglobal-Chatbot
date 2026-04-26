@@ -37,6 +37,7 @@ log = get_logger(__name__)
 
 # Manifest file — records which files have already been ingested
 MANIFEST_PATH = DATA_DIR / "ingested_manifest.json"
+RAW_METADATA_PATH = RAW_DOCS_DIR / "metadata.json"
 
 # How many chunks to embed in one go (tune down if you hit RAM limits)
 DEFAULT_BATCH_SIZE = 100
@@ -60,6 +61,46 @@ def _load_manifest() -> dict:
     if MANIFEST_PATH.exists():
         return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     return {}
+
+
+def _load_raw_metadata() -> dict:
+    """
+    Optional metadata mapping for raw ingestion.
+    File: data/raw/metadata.json
+    Format:
+      {
+        "SomeDoc.pdf": {"module": "Payroll", "year": "2025", "version": "v10", "customer": "Acme"},
+        "folder/Other.docx": {"module": "HR Management"}
+      }
+    Keys are matched by file name OR by relative path (from raw folder).
+    """
+    try:
+        if RAW_METADATA_PATH.exists():
+            return json.loads(RAW_METADATA_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _apply_metadata(docs: list, file_path: Path, meta_map: dict) -> None:
+    rel = ""
+    try:
+        rel = str(file_path.relative_to(RAW_DOCS_DIR)).replace("\\", "/")
+    except Exception:
+        rel = file_path.name
+    extra = meta_map.get(rel) or meta_map.get(file_path.name) or {}
+    if not isinstance(extra, dict):
+        extra = {}
+    # Default module heuristic: top-level folder name.
+    if "module" not in extra:
+        try:
+            extra["module"] = file_path.relative_to(RAW_DOCS_DIR).parts[0]
+        except Exception:
+            extra["module"] = ""
+    for d in docs:
+        for k in ("module", "year", "version", "customer"):
+            if extra.get(k):
+                d.metadata[k] = str(extra.get(k))
 
 
 def _save_manifest(manifest: dict):
@@ -164,6 +205,7 @@ def ingest_folder(
     Returns dict with ingestion stats.
     """
     manifest   = _load_manifest()
+    meta_map   = _load_raw_metadata()
     embeddings = _get_embeddings()
 
     # Collect all files
@@ -224,8 +266,19 @@ def ingest_folder(
                 stats["skipped"] += 1
                 continue
 
+            _apply_metadata(docs, file_path, meta_map)
+
             # Chunk + embed + save
             chunks = chunk_documents(docs, CHUNK_SIZE, CHUNK_OVERLAP)
+            # Dedupe chunks by content hash (reduces noise across repeated boilerplate)
+            seen = set()
+            deduped = []
+            for c in chunks:
+                key = hash((c.page_content or "")[:500])
+                if key not in seen:
+                    seen.add(key)
+                    deduped.append(c)
+            chunks = deduped
             _upsert_chunks(chunks, embeddings, batch_size)
 
             # Mark as done

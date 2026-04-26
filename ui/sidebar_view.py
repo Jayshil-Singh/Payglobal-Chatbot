@@ -88,6 +88,38 @@ def render_sidebar(
         if module != st.session_state.module:
             st.session_state.module = module
 
+        st.markdown("<div class='sb-section-label'>Filters</div>", unsafe_allow_html=True)
+        fy = st.text_input(
+            "Year",
+            value=st.session_state.get("filter_year", ""),
+            placeholder="e.g. 2025",
+            label_visibility="collapsed",
+            key="filter_year_input",
+        )
+        fv = st.text_input(
+            "Version",
+            value=st.session_state.get("filter_version", ""),
+            placeholder="e.g. v10 / 10.2",
+            label_visibility="collapsed",
+            key="filter_version_input",
+        )
+        fc = st.text_input(
+            "Customer",
+            value=st.session_state.get("filter_customer", ""),
+            placeholder="e.g. Acme",
+            label_visibility="collapsed",
+            key="filter_customer_input",
+        )
+        if fy != st.session_state.get("filter_year", ""):
+            st.session_state.filter_year = fy.strip()
+            st.session_state.rag_chain = None
+        if fv != st.session_state.get("filter_version", ""):
+            st.session_state.filter_version = fv.strip()
+            st.session_state.rag_chain = None
+        if fc != st.session_state.get("filter_customer", ""):
+            st.session_state.filter_customer = fc.strip()
+            st.session_state.rag_chain = None
+
         if is_admin:
             st.markdown("<div class='sb-section-label'>API Key</div>", unsafe_allow_html=True)
             kc1, kc2 = st.columns([5, 1])
