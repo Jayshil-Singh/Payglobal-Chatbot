@@ -1,6 +1,8 @@
 import streamlit as st
 
 from config import PASSWORD_MIN_LENGTH
+from db import update_user_network
+from utils.client_info import get_client_ip_and_location
 
 
 def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
@@ -36,6 +38,12 @@ def render_login_page(login_fn, register_fn, default_api_key: str) -> None:
                     st.session_state.authenticated = True
                     st.session_state.user = user
                     st.session_state.api_key = default_api_key
+                    try:
+                        ip, loc = get_client_ip_and_location()
+                        if ip or loc:
+                            update_user_network(user["id"], ip, loc)
+                    except Exception:
+                        pass
                     st.rerun()
                 else:
                     st.error("Invalid username or password.")

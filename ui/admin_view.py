@@ -6,7 +6,7 @@ import streamlit as st
 
 from auth import generate_temp_password, hash_password, set_new_password, validate_password_strength
 from auth import register as auth_register
-from config import GROK_BASE_URL, GROK_MODEL, PASSWORD_MIN_LENGTH, SYSTEM_PROMPT_PATH
+from config import GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
 from ingest import index_exists, ingest_file
 from utils.mailer import send_email
 
@@ -115,207 +115,274 @@ def render_admin_panel(
         st.info(f"⏱️ Rate limit: **{rate_limit_per_hour} req/hr** per user. Admins are always exempt.")
 
     with tabs[1]:
-        st.markdown("#### 👥 Registered Users")
-        all_users = get_all_users_fn()
-        for item in all_users:
-            is_me = item["id"] == user["id"]
-            with st.container():
-                c1, c2, c3, c4, c5, c6, c7 = st.columns([2.0, 2.2, 1.2, 2.2, 1.4, 1.4, 0.7])
-                badge = "🔵" if item["role"] == "admin" else "⚪"
-                c1.markdown(f"{badge} **{item['username']}** {'*(you)*' if is_me else ''}")
-                c2.markdown(f"`{item.get('email') or '—'}`")
+        import pandas as pd
 
-                with c3:
-                    if not is_me:
-                        sel = st.selectbox("Role", ["user", "admin"], index=0 if item["role"] == "user" else 1, key=f"rsel_{item['id']}", label_visibility="collapsed")
-                        if sel != item["role"]:
-                            update_user_role_fn(item["id"], sel)
+        ut1, ut2 = st.tabs(["➕ Create User", "📋 Users List"])
+
+        with ut1:
+            st.markdown("#### ➕ Create New User")
+            with st.form("admin_create_user", clear_on_submit=True):
+                nu1, nu2 = st.columns(2)
+                with nu1:
+                    nu_user = st.text_input("Username", placeholder="Enter username")
+                    nu_email = st.text_input("Email", placeholder="user@company.com")
+                with nu2:
+                    nu_role = st.selectbox("Role", ["user", "admin"])
+
+                if st.form_submit_button("➕ Create User + Send Temp Password", type="primary"):
+                    if nu_user and nu_email:
+                        temp_password = None
+                        try:
+                            temp_password = generate_temp_password()
+                            created_user = auth_register(nu_user, temp_password, nu_email, nu_role)
+                            set_new_password(created_user["id"], temp_password, True)
+                            add_admin_audit_event_fn(
+                                actor_user_id=user["id"],
+                                actor_username=user["username"],
+                                action="user.created",
+                                target_type="user",
+                                target_id=str(created_user["id"]),
+                                target_label=created_user["username"],
+                                metadata={"role": nu_role, "email": nu_email.strip().lower()},
+                            )
+
+                            if smtp_user and smtp_password:
+                                send_email(
+                                    smtp_host=smtp_host,
+                                    smtp_port=smtp_port,
+                                    smtp_user=smtp_user,
+                                    smtp_password=smtp_password,
+                                    to_email=nu_email.strip(),
+                                    subject="PayGlobal AI account created - temporary password",
+                                    body=(
+                                        f"Hello {nu_user},\n\n"
+                                        "Your PayGlobal AI account has been created.\n\n"
+                                        f"Username: {nu_user.strip().lower()}\n"
+                                        f"Temporary password: {temp_password}\n\n"
+                                        "Please log in and change your password immediately.\n"
+                                    ),
+                                    sendgrid_api_key=sendgrid_api_key,
+                                    sendgrid_from_email=sendgrid_from_email,
+                                )
+                                st.success(f"✅ User **{nu_user}** created as `{nu_role}`. Temporary password emailed.")
+                            else:
+                                st.warning("User created, but SMTP is not configured. Share temporary password securely.")
+                                st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
+                            st.rerun()
+                        except ValueError as exc:
+                            st.error(str(exc))
+                        except Exception as exc:
+                            st.error(
+                                "User created, but email failed. "
+                                "Check SMTP secrets (host/user/password) and try again.\n\n"
+                                f"Details: {exc}"
+                            )
+                            if temp_password:
+                                st.warning("Share these temporary credentials securely with the user:")
+                                st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
+                    else:
+                        st.error("Username and email are required.")
+
+        with ut2:
+            st.markdown("#### 👥 Users")
+            all_users = get_all_users_fn()
+            df = pd.DataFrame(all_users or [])
+            if df.empty:
+                st.info("No users found.")
+                return
+
+            # Normalize expected columns
+            expected = [
+                "id",
+                "username",
+                "email",
+                "role",
+                "is_active",
+                "failed_login_attempts",
+                "locked_until",
+                "last_login",
+                "last_ip",
+                "last_location",
+                "last_seen_at",
+            ]
+            for col in expected:
+                if col not in df.columns:
+                    df[col] = ""
+
+            df["status"] = df["is_active"].apply(lambda v: "Active" if int(v or 0) == 1 else "Disabled")
+            view = df[
+                [
+                    "id",
+                    "username",
+                    "email",
+                    "role",
+                    "status",
+                    "failed_login_attempts",
+                    "locked_until",
+                    "last_login",
+                    "last_ip",
+                    "last_location",
+                    "last_seen_at",
+                ]
+            ].copy()
+            view.columns = [
+                "ID",
+                "Username",
+                "Email",
+                "Role",
+                "Status",
+                "Failed",
+                "Locked Until",
+                "Last Login",
+                "IP",
+                "Location",
+                "Last Seen",
+            ]
+            view["Locked Until"] = view["Locked Until"].astype(str).str[:19]
+            view["Last Login"] = view["Last Login"].astype(str).str[:19]
+            view["Last Seen"] = view["Last Seen"].astype(str).str[:19]
+
+            q = st.text_input("Search users", placeholder="Search by username/email…", label_visibility="collapsed")
+            if q:
+                ql = q.lower().strip()
+                view = view[
+                    view["Username"].astype(str).str.lower().str.contains(ql)
+                    | view["Email"].astype(str).str.lower().str.contains(ql)
+                ]
+
+            st.dataframe(view, width="stretch", height=420)
+
+            st.divider()
+            st.markdown("#### 🔧 Manage Selected User")
+            by_id = {int(u["id"]): u for u in all_users if u and u.get("id") is not None}
+            ids = sorted(by_id.keys())
+            selected_id = st.selectbox("Select user ID", ids, format_func=lambda x: f"{x} · {by_id[x]['username']}")
+            sel_user = by_id[int(selected_id)]
+            is_me = sel_user["id"] == user["id"]
+
+            a1, a2, a3, a4 = st.columns([1.2, 1.4, 1.4, 1.0])
+            with a1:
+                if not is_me:
+                    new_role = st.selectbox("Role", ["user", "admin"], index=0 if sel_user["role"] == "user" else 1, key="um_role")
+                    if st.button("Apply Role", width="stretch"):
+                        if new_role != sel_user["role"]:
+                            update_user_role_fn(sel_user["id"], new_role)
                             add_admin_audit_event_fn(
                                 actor_user_id=user["id"],
                                 actor_username=user["username"],
                                 action="user.role_changed",
                                 target_type="user",
-                                target_id=str(item["id"]),
-                                target_label=item["username"],
-                                metadata={"new_role": sel, "old_role": item["role"]},
+                                target_id=str(sel_user["id"]),
+                                target_label=sel_user["username"],
+                                metadata={"new_role": new_role, "old_role": sel_user["role"]},
                             )
-                            st.toast(f"✅ {item['username']} → {sel}")
+                            st.success("Role updated.")
                             st.rerun()
-                    else:
-                        st.caption(f"`{item['role']}`")
+                else:
+                    st.caption("You cannot change your own role.")
 
-                with c4:
-                    if not is_me:
-                        new_pw = st.text_input("New password", key=f"npw_{item['id']}", placeholder="New password…", type="password", label_visibility="collapsed")
-                        if st.button("🔑 Reset", key=f"rpw_{item['id']}", width="stretch"):
-                            if new_pw and len(new_pw) >= PASSWORD_MIN_LENGTH:
-                                try:
-                                    validate_password_strength(new_pw)
-                                except ValueError as exc:
-                                    st.warning(str(exc))
-                                    continue
-                                reset_user_password_fn(item["id"], hash_password(new_pw))
-                                add_admin_audit_event_fn(
-                                    actor_user_id=user["id"],
-                                    actor_username=user["username"],
-                                    action="user.password_reset",
-                                    target_type="user",
-                                    target_id=str(item["id"]),
-                                    target_label=item["username"],
-                                )
-                                st.toast(f"🔑 Password reset for {item['username']}")
-                            else:
-                                st.warning(f"Min {PASSWORD_MIN_LENGTH} characters required.")
+            with a2:
+                if not is_me:
+                    pw = st.text_input("Set new password", type="password", key="um_pw", placeholder="New password…")
+                    if st.button("Reset Password", width="stretch"):
+                        try:
+                            validate_password_strength(pw)
+                        except ValueError as exc:
+                            st.error(str(exc))
+                        else:
+                            reset_user_password_fn(sel_user["id"], hash_password(pw))
+                            add_admin_audit_event_fn(
+                                actor_user_id=user["id"],
+                                actor_username=user["username"],
+                                action="user.password_reset",
+                                target_type="user",
+                                target_id=str(sel_user["id"]),
+                                target_label=sel_user["username"],
+                            )
+                            st.success("Password reset.")
+                            st.rerun()
+                else:
+                    st.caption("Use your profile/password change flow.")
 
-                with c5:
-                    if not is_me and st.button("Resend Temp Password", key=f"temp_{item['id']}", help=f"Send temporary password to {item['username']}", width="stretch"):
-                        if not item.get("email"):
-                            st.warning(f"{item['username']} has no email address.")
-                        elif not (smtp_user and smtp_password):
-                            st.error("SMTP is not configured. Set SMTP_USER and SMTP_PASSWORD in .env.")
+            with a3:
+                if not is_me:
+                    if st.button("Resend Temp Password", width="stretch"):
+                        if not sel_user.get("email"):
+                            st.error("User has no email.")
                         else:
                             try:
                                 temp_password = generate_temp_password()
-                                set_new_password(item["id"], temp_password, True)
+                                set_new_password(sel_user["id"], temp_password, True)
                                 add_admin_audit_event_fn(
                                     actor_user_id=user["id"],
                                     actor_username=user["username"],
                                     action="user.temp_password_resent",
                                     target_type="user",
-                                    target_id=str(item["id"]),
-                                    target_label=item["username"],
-                                    metadata={"email": item.get("email") or ""},
+                                    target_id=str(sel_user["id"]),
+                                    target_label=sel_user["username"],
+                                    metadata={"email": sel_user.get("email") or ""},
                                 )
                                 send_email(
                                     smtp_host=smtp_host,
                                     smtp_port=smtp_port,
                                     smtp_user=smtp_user,
                                     smtp_password=smtp_password,
-                                    to_email=item["email"],
+                                    to_email=sel_user["email"],
                                     subject="PayGlobal AI - temporary password reset",
                                     body=(
-                                        f"Hello {item['username']},\n\n"
+                                        f"Hello {sel_user['username']},\n\n"
                                         "An administrator has reset your account access.\n\n"
-                                        f"Username: {item['username']}\n"
+                                        f"Username: {sel_user['username']}\n"
                                         f"Temporary password: {temp_password}\n\n"
                                         "You must change this password immediately after login.\n"
                                     ),
                                     sendgrid_api_key=sendgrid_api_key,
                                     sendgrid_from_email=sendgrid_from_email,
                                 )
-                                st.toast(f"✉️ Temporary password sent to {item['email']}")
+                                st.success("Temporary password sent.")
                             except Exception as exc:
-                                st.error(f"Failed to send temp password: {exc}")
+                                st.error(f"Failed to send: {exc}")
+                else:
+                    st.caption("You cannot resend your own temp password.")
 
-                with c6:
-                    if not is_me:
-                        status = "Disable" if item.get("is_active", 1) else "Enable"
-                        if st.button(status, key=f"toggle_active_{item['id']}", width="stretch"):
-                            new_state = not bool(item.get("is_active", 1))
-                            set_user_active_fn(item["id"], new_state)
-                            add_admin_audit_event_fn(
-                                actor_user_id=user["id"],
-                                actor_username=user["username"],
-                                action="user.disabled" if not new_state else "user.enabled",
-                                target_type="user",
-                                target_id=str(item["id"]),
-                                target_label=item["username"],
-                            )
-                            st.toast(f"✅ Account updated: {item['username']}")
-                            st.rerun()
-                        if st.button("Unlock", key=f"unlock_{item['id']}", width="stretch"):
-                            unlock_user_fn(item["id"])
-                            add_admin_audit_event_fn(
-                                actor_user_id=user["id"],
-                                actor_username=user["username"],
-                                action="user.unlocked",
-                                target_type="user",
-                                target_id=str(item["id"]),
-                                target_label=item["username"],
-                            )
-                            st.toast(f"🔓 Unlocked {item['username']}")
-                            st.rerun()
-
-                with c7:
-                    if not is_me and st.button("🗑️", key=f"delu_{item['id']}", help=f"Delete {item['username']}"):
-                        delete_user_fn(item["id"])
+            with a4:
+                if not is_me:
+                    active = bool(sel_user.get("is_active", 1))
+                    if st.button("Disable" if active else "Enable", width="stretch"):
+                        set_user_active_fn(sel_user["id"], not active)
+                        add_admin_audit_event_fn(
+                            actor_user_id=user["id"],
+                            actor_username=user["username"],
+                            action="user.disabled" if active else "user.enabled",
+                            target_type="user",
+                            target_id=str(sel_user["id"]),
+                            target_label=sel_user["username"],
+                        )
+                        st.rerun()
+                    if st.button("Unlock", width="stretch"):
+                        unlock_user_fn(sel_user["id"])
+                        add_admin_audit_event_fn(
+                            actor_user_id=user["id"],
+                            actor_username=user["username"],
+                            action="user.unlocked",
+                            target_type="user",
+                            target_id=str(sel_user["id"]),
+                            target_label=sel_user["username"],
+                        )
+                        st.rerun()
+                    if st.button("Delete", width="stretch"):
+                        delete_user_fn(sel_user["id"])
                         add_admin_audit_event_fn(
                             actor_user_id=user["id"],
                             actor_username=user["username"],
                             action="user.deleted",
                             target_type="user",
-                            target_id=str(item["id"]),
-                            target_label=item["username"],
+                            target_id=str(sel_user["id"]),
+                            target_label=sel_user["username"],
                         )
-                        st.toast(f"🗑️ Deleted {item['username']}")
                         st.rerun()
-            status_text = "Active" if item.get("is_active", 1) else "Disabled"
-            lock_text = item.get("locked_until") or "Not locked"
-            attempts = int(item.get("failed_login_attempts") or 0)
-            st.caption(f"Status: {status_text} · Failed attempts: {attempts} · Locked until: {lock_text}")
-            st.divider()
-
-        st.markdown("#### ➕ Create New User")
-        with st.form("admin_create_user", clear_on_submit=True):
-            nu1, nu2 = st.columns(2)
-            with nu1:
-                nu_user = st.text_input("Username", placeholder="Enter username")
-                nu_email = st.text_input("Email", placeholder="user@company.com")
-            with nu2:
-                nu_role = st.selectbox("Role", ["user", "admin"])
-            if st.form_submit_button("➕ Create User + Send Temp Password", type="primary"):
-                if nu_user and nu_email:
-                    temp_password = None
-                    try:
-                        temp_password = generate_temp_password()
-                        created_user = auth_register(nu_user, temp_password, nu_email, nu_role)
-                        set_new_password(created_user["id"], temp_password, True)
-                        add_admin_audit_event_fn(
-                            actor_user_id=user["id"],
-                            actor_username=user["username"],
-                            action="user.created",
-                            target_type="user",
-                            target_id=str(created_user["id"]),
-                            target_label=created_user["username"],
-                            metadata={"role": nu_role, "email": nu_email.strip().lower()},
-                        )
-
-                        if smtp_user and smtp_password:
-                            send_email(
-                                smtp_host=smtp_host,
-                                smtp_port=smtp_port,
-                                smtp_user=smtp_user,
-                                smtp_password=smtp_password,
-                                to_email=nu_email.strip(),
-                                subject="PayGlobal AI account created - temporary password",
-                                body=(
-                                    f"Hello {nu_user},\n\n"
-                                    "Your PayGlobal AI account has been created.\n\n"
-                                    f"Username: {nu_user.strip().lower()}\n"
-                                    f"Temporary password: {temp_password}\n\n"
-                                    "Please log in and change your password immediately.\n"
-                                ),
-                                    sendgrid_api_key=sendgrid_api_key,
-                                    sendgrid_from_email=sendgrid_from_email,
-                            )
-                            st.success(f"✅ User **{nu_user}** created as `{nu_role}`. Temporary password emailed.")
-                        else:
-                            st.warning("User created, but SMTP is not configured. Share temporary password securely.")
-                            st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
-                        st.rerun()
-                    except ValueError as exc:
-                        st.error(str(exc))
-                    except Exception as exc:
-                        st.error(
-                            "User created, but email failed. "
-                            "Check SMTP secrets (host/user/password) and try again.\n\n"
-                            f"Details: {exc}"
-                        )
-                        if temp_password:
-                            st.warning("Share these temporary credentials securely with the user:")
-                            st.code(f"Username: {nu_user.strip().lower()}\nTemporary password: {temp_password}")
                 else:
-                    st.error("Username and email are required.")
+                    st.caption("You cannot disable/delete yourself.")
 
     with tabs[2]:
         st.markdown("#### 📂 Uploaded Files")

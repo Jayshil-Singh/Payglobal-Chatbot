@@ -47,6 +47,9 @@ def init_db():
                 is_active     INTEGER DEFAULT 1,
                 failed_login_attempts INTEGER DEFAULT 0,
                 locked_until  TIMESTAMP,
+                last_ip       TEXT,
+                last_location TEXT,
+                last_seen_at  TIMESTAMP,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login    TIMESTAMP
             );
@@ -123,6 +126,12 @@ def init_db():
             conn.execute("UPDATE users SET failed_login_attempts = 0 WHERE failed_login_attempts IS NULL")
         if "locked_until" not in cols:
             conn.execute("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP")
+        if "last_ip" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN last_ip TEXT")
+        if "last_location" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN last_location TEXT")
+        if "last_seen_at" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN last_seen_at TIMESTAMP")
     log.info("Database initialized.")
 
 
@@ -322,12 +331,21 @@ def get_all_users() -> list[dict]:
             SELECT
                 id, username, email, role,
                 is_active, must_change_password, failed_login_attempts, locked_until,
+                last_ip, last_location, last_seen_at,
                 created_at, last_login
             FROM users
             ORDER BY created_at DESC
             """
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def update_user_network(user_id: int, ip: str, location: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET last_ip = ?, last_location = ?, last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+            ((ip or "").strip(), (location or "").strip(), user_id),
+        )
 
 
 def get_analytics_data() -> dict:
