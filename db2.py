@@ -209,7 +209,44 @@ def get_session() -> Session:
 def init_db() -> None:
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
+    # SQLite needs lightweight auto-migrations for existing deployments.
+    # Postgres should use Alembic.
+    try:
+        if engine.url.get_backend_name().startswith("sqlite"):
+            _sqlite_auto_migrate(engine)
+    except Exception:
+        # Never fail app startup due to best-effort migration.
+        pass
     log.info("Database initialized.")
+
+
+def _sqlite_auto_migrate(engine: Engine) -> None:
+    """
+    Best-effort schema evolution for SQLite deployments created before SQLAlchemy cutover.
+    Adds missing columns used by current code.
+    """
+    raw = engine.raw_connection()
+    try:
+        cur = raw.cursor()
+        cur.execute("PRAGMA table_info(users)")
+        cols = [r[1] for r in cur.fetchall()]
+
+        def add_col(name: str, ddl: str) -> None:
+            if name not in cols:
+                cur.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
+
+        add_col("role", "role TEXT DEFAULT 'user'")
+        add_col("must_change_password", "must_change_password INTEGER DEFAULT 0")
+        add_col("is_active", "is_active INTEGER DEFAULT 1")
+        add_col("failed_login_attempts", "failed_login_attempts INTEGER DEFAULT 0")
+        add_col("locked_until", "locked_until TIMESTAMP")
+        add_col("last_ip", "last_ip TEXT")
+        add_col("last_location", "last_location TEXT")
+        add_col("last_seen_at", "last_seen_at TIMESTAMP")
+
+        raw.commit()
+    finally:
+        raw.close()
 
 
 # ── Sessions ──────────────────────────────────────────────────────────────
