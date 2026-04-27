@@ -1,7 +1,7 @@
 import streamlit as st
 
 from config import RATE_LIMIT_PER_HOUR
-from db import (
+from db2 import (
     create_conversation,
     get_messages,
     get_request_count_last_hour,

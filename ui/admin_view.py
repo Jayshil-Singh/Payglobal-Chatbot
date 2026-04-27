@@ -8,6 +8,7 @@ from auth import generate_temp_password, hash_password, set_new_password, valida
 from auth import register as auth_register
 from config import DATA_RETENTION_DAYS, GROK_BASE_URL, GROK_MODEL, SYSTEM_PROMPT_PATH
 from ingest import index_exists, ingest_file
+from services.job_runner import get_job, list_jobs, submit_job
 from utils.mailer import send_email
 
 
@@ -443,14 +444,46 @@ def render_admin_panel(
         st.markdown("#### 📥 Ingest RAW folder (incremental)")
         st.caption("Ingests new/changed files in `data/raw/` using the manifest (no full re-index).")
         if ingest_folder_fn and raw_docs_dir:
-            if st.button("Ingest new/changed raw docs", width="stretch", type="primary"):
-                with st.spinner("Ingesting raw docs…"):
-                    stats = ingest_folder_fn(folder=raw_docs_dir, force=False, batch_size=100, show_progress=False)
-                st.session_state.rag_chain = None
-                st.success(
-                    f"RAW ingest complete: ingested={stats.get('ingested')} skipped={stats.get('skipped')} "
-                    f"failed={stats.get('failed')} chunks={stats.get('chunks')}"
+            if st.button("Queue raw ingest job", width="stretch", type="primary"):
+                job_id = submit_job(
+                    "raw_ingest",
+                    ingest_folder_fn,
+                    folder=raw_docs_dir,
+                    force=False,
+                    batch_size=100,
+                    show_progress=False,
                 )
+                st.session_state.last_raw_ingest_job_id = job_id
+                st.info(f"Queued raw ingest job: `{job_id}`")
+
+            job_id = st.session_state.get("last_raw_ingest_job_id")
+            if job_id:
+                job = get_job(job_id)
+                if job:
+                    st.caption(f"Latest raw ingest job status: **{job.get('status')}**")
+                    if job.get("status") == "done":
+                        stats = job.get("result") or {}
+                        st.session_state.rag_chain = None
+                        st.success(
+                            f"RAW ingest complete: ingested={stats.get('ingested')} skipped={stats.get('skipped')} "
+                            f"failed={stats.get('failed')} chunks={stats.get('chunks')}"
+                        )
+                    elif job.get("status") == "failed":
+                        st.error(f"RAW ingest failed: {job.get('error')}")
+
+            with st.expander("Background jobs"):
+                jobs = list_jobs(15)
+                if not jobs:
+                    st.caption("No background jobs yet.")
+                else:
+                    import pandas as pd
+
+                    jdf = pd.DataFrame(jobs)
+                    for col in ["id", "name", "status", "updated_at", "error"]:
+                        if col not in jdf.columns:
+                            jdf[col] = ""
+                    jdf = jdf[["id", "name", "status", "updated_at", "error"]]
+                    st.dataframe(jdf, width="stretch", height=220)
 
     with tabs[3]:
         st.markdown("#### 🤖 LLM & Rate Limit Configuration")

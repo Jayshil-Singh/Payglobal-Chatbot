@@ -1,7 +1,7 @@
 import pytest
 
 import auth
-import db
+import db2 as db
 
 
 def test_register_and_login_success(isolated_db):

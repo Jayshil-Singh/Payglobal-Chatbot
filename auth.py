@@ -14,7 +14,7 @@ from config import (
     MAX_FAILED_LOGIN_ATTEMPTS,
     PASSWORD_MIN_LENGTH,
 )
-from db import (
+from db2 import (
     clear_failed_login_state,
     create_user,
     get_user,

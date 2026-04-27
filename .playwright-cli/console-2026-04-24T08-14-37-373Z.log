@@ -13,3 +13,4 @@
 [64408100ms] [WARNING] WebSocket connection to 'ws://localhost:8502/_stcore/stream' failed: WebSocket is closed before the connection is established. @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
 [67793100ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
 [68848311ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136
+[226604414ms] [WARNING] WebSocket onclose @ http://localhost:8502/static/js/index.RuhrnD1v.js:136

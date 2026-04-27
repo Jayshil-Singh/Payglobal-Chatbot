@@ -25,7 +25,7 @@ from config import (
     SMTP_USER,
     UPLOADS_DIR,
 )
-from db import (
+from db2 import (
     add_admin_audit_event,
     delete_conversation,
     delete_user,

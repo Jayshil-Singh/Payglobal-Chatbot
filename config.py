@@ -12,6 +12,7 @@ RAW_DOCS_DIR    = DATA_DIR / "raw"
 UPLOADS_DIR     = DATA_DIR / "uploads"
 FAISS_INDEX_DIR = DATA_DIR / "faiss_index"
 DB_PATH         = str(DATA_DIR / "payglobal.db")
+DATABASE_URL    = os.getenv("DATABASE_URL", "").strip()
 SYSTEM_PROMPT_PATH = BASE_DIR / "prompts" / "system_prompt.txt"
 
 # Auto-create required directories

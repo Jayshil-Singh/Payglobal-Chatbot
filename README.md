@@ -38,8 +38,19 @@ py -3 scripts/reset_admin_password.py --username admin --password "NewStrongPass
 
 - Keep `ALLOW_DANGEROUS_DESERIALIZATION=false`.
 - Use a managed secrets store for `.env` values.
-- Move from SQLite to Postgres for multi-user scale.
+- For multi-user scale, set `DATABASE_URL` to Postgres and run migrations:
+  - `py -3 scripts/db_migrate.py`
 - Add CI checks (lint/tests/security scans) before deployment.
+
+## Enterprise SSO (Trusted Header)
+
+For enterprise SSO behind a reverse proxy:
+
+- Set `SSO_HEADER_USERNAME` (for example `X-Auth-Request-Email`)
+- Optionally set `SSO_ADMIN_USERS` (comma separated)
+- Optionally keep `SSO_AUTO_PROVISION=true`
+
+Your proxy must authenticate users and inject the trusted header.
 
 ## Quality Gates
 

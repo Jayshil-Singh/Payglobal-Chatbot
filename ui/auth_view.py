@@ -2,7 +2,7 @@ import streamlit as st
 
 from auth import hash_password
 from config import PASSWORD_MIN_LENGTH, SSO_ADMIN_USERS, SSO_AUTO_PROVISION, SSO_HEADER_USERNAME
-from db import create_user, get_user, get_user_by_email, update_user_network
+from db2 import create_user, get_user, get_user_by_email, update_user_network
 from utils.client_info import get_client_ip_and_location, get_header_value
 
 

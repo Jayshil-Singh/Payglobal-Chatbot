@@ -1,4 +1,4 @@
-import db
+import db2 as db
 
 
 def test_feedback_upsert_single_vote_per_user(isolated_db):
@@ -15,5 +15,8 @@ def test_feedback_upsert_single_vote_per_user(isolated_db):
             (msg_id, user_id),
         ).fetchone()
 
-    assert row["cnt"] == 1
-    assert row["rating"] == -1
+    # sqlite driver may return row tuple in SQLAlchemy raw_connection mode
+    cnt = row["cnt"] if not isinstance(row, tuple) else row[0]
+    rating = row["rating"] if not isinstance(row, tuple) else row[1]
+    assert cnt == 1
+    assert rating == -1
