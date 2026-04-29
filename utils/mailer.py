@@ -3,6 +3,8 @@ from email.message import EmailMessage
 
 import requests
 
+from config import APP_LINK
+
 
 def send_email(
     *,
@@ -43,6 +45,10 @@ def send_email(
         if resp.status_code >= 300:
             raise RuntimeError(f"SendGrid delivery failed: {resp.status_code} {resp.text[:300]}")
         return
+
+    # Ensure every email includes a direct login link for operator convenience.
+    if APP_LINK and APP_LINK.strip() and APP_LINK not in body:
+        body = (body or "").rstrip() + f"\n\nLog in here: {APP_LINK}\n"
 
     msg = EmailMessage()
     msg["Subject"] = subject

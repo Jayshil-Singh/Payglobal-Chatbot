@@ -40,6 +40,7 @@ MEMORY_WINDOW = 6   # conversation turns to keep in memory
 # ── App ────────────────────────────────────────────────────────────────────
 APP_TITLE = "PayGlobal AI Assistant"
 APP_ICON  = "🌐"
+APP_LINK  = os.getenv("APP_LINK", "https://payglobalchatbot.streamlit.app")
 
 PAYGLOBAL_MODULES = [
     "All Modules",

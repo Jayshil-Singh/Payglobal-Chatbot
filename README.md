@@ -2,6 +2,10 @@
 
 Enterprise-oriented internal chatbot for PayGlobal implementation support using Streamlit + RAG.
 
+## Live App
+
+- [payglobalchatbot.streamlit.app](https://payglobalchatbot.streamlit.app)
+
 ## Quick Start
 
 1. Copy `.env.example` to `.env`.
